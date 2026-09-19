@@ -86,7 +86,7 @@ export circuit incrementSession(): [] {
 - **Contract Address**: `0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f`
 - **Midnight Explorer**: [https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f)
 - **GitHub Repository**: [https://github.com/sdutta2004/private-skill-certification](https://github.com/sdutta2004/private-skill-certification)
-- **Live Demo Video**: [https://youtu.be/pXix0DCIdFo](https://youtu.be/pXix0DCIdFo)
+- **Live Demo Video**: [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4)
 - **Live Application**: [https://private-skill-certification.vercel.app/](https://private-skill-certification.vercel.app/)
 
 ---

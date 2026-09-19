@@ -4,7 +4,7 @@
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-private--skill--certification-181717?style=flat-square&logo=github)](https://github.com/sdutta2004/private-skill-certification)
 [![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_App-000000?style=flat-square&logo=vercel)](https://private-skill-certification.vercel.app/)
-[![YouTube Demo](https://img.shields.io/badge/YouTube-Demo_Video-FF0000?style=flat-square&logo=youtube)](https://youtu.be/pXix0DCIdFo)
+[![YouTube Demo](https://img.shields.io/badge/YouTube-Demo_Video-FF0000?style=flat-square&logo=youtube)](https://youtu.be/Eu6eRTsOWE4)
 [![Framework](https://img.shields.io/badge/Framework-Next.js_14-black?style=flat-square&logo=nextdotjs)](https://nextjs.org)
 [![CI/CD Pipeline](https://github.com/sdutta2004/private-skill-certification/actions/workflows/ci.yml/badge.svg)](https://github.com/sdutta2004/private-skill-certification/actions/workflows/ci.yml)
 [![Midnight Network](https://img.shields.io/badge/Network-Midnight_Preview-8b5cf6?style=flat-square)](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f)
@@ -28,9 +28,9 @@ Built on Midnight Network's Compact zero-knowledge smart contracts, candidates g
 
 > **Demonstrates:** Midnight Lace wallet connection → client-side ZK witness generation → on-chain `issueCertificate()` execution → public state verification on Midnight Preview.
 
-[![PSC Video Walkthrough](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/pXix0DCIdFo)
+[![PSC Video Walkthrough](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/Eu6eRTsOWE4)
 
-**Watch on YouTube**: [https://youtu.be/pXix0DCIdFo](https://youtu.be/pXix0DCIdFo)
+**Watch on YouTube**: [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4)
 
 ---
 
@@ -40,7 +40,7 @@ Built on Midnight Network's Compact zero-knowledge smart contracts, candidates g
 |---|---|
 | GitHub Repository | [https://github.com/sdutta2004/private-skill-certification](https://github.com/sdutta2004/private-skill-certification) |
 | Live Application | [https://private-skill-certification.vercel.app/](https://private-skill-certification.vercel.app/) |
-| YouTube Demo Video | [https://youtu.be/pXix0DCIdFo](https://youtu.be/pXix0DCIdFo) |
+| YouTube Demo Video | [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4) |
 | Midnight Explorer | [https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f) |
 | **Contract Address** | `0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f` |
 | Network | Midnight Preview Testnet |
@@ -123,5 +123,5 @@ Built on Midnight Network's Compact zero-knowledge smart contracts, candidates g
 - [x] **Verified Contract**: [0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f)
 - [x] **10/10 Vitest Tests**: Passing
 - [x] **Next.js 14 Build**: Clean static generation
-- [x] **YouTube Demo Video**: [https://youtu.be/pXix0DCIdFo](https://youtu.be/pXix0DCIdFo)
+- [x] **YouTube Demo Video**: [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4)
 - [x] **GitHub Actions CI**: Automated test & build workflow
