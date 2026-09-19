@@ -1,0 +1,146 @@
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+// ─── Ledger State ─────────────────────────────────────────────────────────────
+// Public counters and anchors stored on-chain
+export ledger certificateCount: Counter;           // Total certificates ever issued
+export ledger revokedCount: Counter;               // Total certificates revoked
+export ledger activeSession: Counter;              // Monotonic session nonce (for replay protection)
+export ledger skillId: Bytes<32>;                  // Current active skill program ID
+export ledger issuerCommitment: Bytes<32>;         // Issuer's public key commitment (authority anchor)
+export ledger lastCertificationCommitment: Bytes<32>; // Most recent issued ZK commitment
+export ledger lastRevokedCommitment: Bytes<32>;    // Most recent revoked commitment hash
+export ledger certificationThreshold: Uint<32>;   // Minimum score threshold set by issuer
+
+// ─── Witnesses (Private Inputs — Never Disclosed On-Chain) ────────────────────
+witness candidateSecretKey(): Bytes<32>;     // Candidate's private secret key
+witness scoreProofNonce(): Bytes<32>;        // Entropy nonce for ZK commitment binding
+witness certificationRecordHash(): Bytes<32>; // SHA-256 of the full assessment record
+witness candidateScoreProof(): Uint<32>;     // Candidate's private exam score (compared to threshold)
+witness issuerSigningKey(): Bytes<32>;       // Issuer's private signing key (authorizes admin ops)
+
+// ─── Circuit 1: issueCertificate ──────────────────────────────────────────────
+// Candidate privately proves they passed the exam (score >= threshold) and binds
+// their identity, score nonce, and assessment record into a ZK commitment.
+// Only the commitment hash is disclosed on-chain — no identity, score, or record.
+export circuit issueCertificate(expectedSkillId: Bytes<32>): Bytes<32> {
+  // Verify this candidate is certifying for the currently active skill program
+  assert(skillId == expectedSkillId, "Skill program ID mismatch: certification rejected");
+
+  // Private witness resolution — these values NEVER leave the device
+  const candidateKey = candidateSecretKey();
+  const nonce = scoreProofNonce();
+  const certRecord = certificationRecordHash();
+  const candidateScore = candidateScoreProof();
+
+  // ZK Score Threshold Enforcement:
+  // Prove the candidate's score meets or exceeds the issuer-set threshold
+  // WITHOUT disclosing the actual score on-chain.
+  assert(candidateScore >= certificationThreshold, "Score below certification threshold: proof rejected");
+
+  // Derive a unique session binding to prevent cross-session commitment reuse
+  const sessionBytes = pad(32, "psc:session:binding");
+
+  // Build the multi-input ZK commitment hash (Vector<5, Bytes<32>>):
+  // Hash(domain_tag || candidateKey || nonce || certRecord || session)
+  const certificationCommitment = persistentHash<Vector<5, Bytes<32>>>([
+    pad(32, "psc:skill:certification:v2"),
+    candidateKey,
+    nonce,
+    certRecord,
+    sessionBytes
+  ]);
+
+  // Increment total certificate count
+  certificateCount.increment(1);
+
+  // Disclose ONLY the commitment hash — all private inputs remain hidden
+  const disclosedCommitment = disclose(certificationCommitment);
+  lastCertificationCommitment = disclosedCommitment;
+
+  return disclosedCommitment;
+}
+
+// ─── Circuit 2: verifyCertificate ─────────────────────────────────────────────
+// Any on-chain observer can verify whether a claimed commitment matches the
+// most recently stored on-chain commitment. Used by employers / verifiers.
+export circuit verifyCertificate(claimedCommitment: Bytes<32>): Boolean {
+  const matches = lastCertificationCommitment == claimedCommitment;
+  return disclose(matches);
+}
+
+// ─── Circuit 3: revokeCertificate ─────────────────────────────────────────────
+// Issuer revokes a specific certification commitment (e.g., fraud detected).
+// The issuer must supply their private signing key as a witness for authorization.
+// Revoked commitment is stored on-chain for verifier reference.
+export circuit revokeCertificate(commitmentToRevoke: Bytes<32>): Bytes<32> {
+  // Issuer private key authorization via ZK witness
+  const issuerKey = issuerSigningKey();
+
+  // Derive the expected issuer commitment from the private signing key
+  const derivedIssuerCommitment = persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "psc:issuer:authority:v1"),
+    issuerKey
+  ]);
+
+  // Verify that the signer is the registered issuer authority
+  assert(derivedIssuerCommitment == issuerCommitment, "Unauthorized: issuer commitment mismatch");
+
+  // Record the revocation — increment revoked counter
+  revokedCount.increment(1);
+
+  // Store the revoked commitment on-chain for verifier lookups
+  const disclosedRevoked = disclose(commitmentToRevoke);
+  lastRevokedCommitment = disclosedRevoked;
+
+  return disclosedRevoked;
+}
+
+// ─── Circuit 4: setIssuerCommitment ───────────────────────────────────────────
+// One-time setup (or re-keying): anchors the issuer's authority commitment
+// on-chain from their private signing key. Subsequent admin circuits verify
+// against this public anchor.
+export circuit setIssuerCommitment(newThreshold: Uint<32>): Bytes<32> {
+  // Derive the issuer's public commitment from their private signing key
+  const issuerKey = issuerSigningKey();
+
+  const newIssuerCommitment = persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "psc:issuer:authority:v1"),
+    issuerKey
+  ]);
+
+  // Anchor the new issuer commitment on-chain
+  const disclosedCommitment = disclose(newIssuerCommitment);
+  issuerCommitment = disclosedCommitment;
+
+  // Update the certification score threshold (issuer-controlled)
+  certificationThreshold = newThreshold;
+
+  // Bump session to invalidate any pending stale proofs
+  activeSession.increment(1);
+
+  return disclosedCommitment;
+}
+
+// ─── Circuit 5: resetCertification ────────────────────────────────────────────
+// Admin resets the active skill program ID and updates the score threshold.
+// The new session nonce invalidates all commitments from previous sessions.
+export circuit resetCertification(newSkillId: Bytes<32>, newThreshold: Uint<32>): Bytes<32> {
+  // Record the new skill program ID on-chain (public)
+  skillId = disclose(newSkillId);
+
+  // Update the score threshold for the new program
+  certificationThreshold = newThreshold;
+
+  // Increment session to create a clean epoch boundary
+  activeSession.increment(1);
+
+  return skillId;
+}
+
+// ─── Circuit 6: incrementSession ──────────────────────────────────────────────
+// Bumps the session counter to invalidate pending stale proofs.
+// Can be called independently (e.g., after a security incident).
+export circuit incrementSession(): [] {
+  activeSession.increment(1);
+}

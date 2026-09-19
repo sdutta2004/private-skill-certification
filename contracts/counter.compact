@@ -1,0 +1,41 @@
+pragma language_version 0.23;
+import CompactStandardLibrary;
+
+export ledger certificateCount: Counter;
+export ledger skillId: Bytes<32>;
+export ledger lastCertificationCommitment: Bytes<32>;
+export ledger activeSession: Counter;
+
+witness candidateSecretKey(): Bytes<32>;
+witness scoreProofNonce(): Bytes<32>;
+witness certificationRecordHash(): Bytes<32>;
+
+export circuit issueCertificate(expectedSkillId: Bytes<32>): Bytes<32> {
+  assert(skillId == expectedSkillId, "Invalid skill certification ID provided");
+
+  const candidateKey = candidateSecretKey();
+  const nonce = scoreProofNonce();
+  const certRecord = certificationRecordHash();
+
+  const certificationCommitment = persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "psc:skill:certification:v1"),
+    candidateKey,
+    nonce,
+    certRecord
+  ]);
+
+  certificateCount.increment(1);
+  const disclosedCommitment = disclose(certificationCommitment);
+  lastCertificationCommitment = disclosedCommitment;
+  return disclosedCommitment;
+}
+
+export circuit resetCertification(newSkillId: Bytes<32>): Bytes<32> {
+  skillId = disclose(newSkillId);
+  activeSession.increment(1);
+  return skillId;
+}
+
+export circuit incrementSession(): [] {
+  activeSession.increment(1);
+}
