@@ -20,7 +20,10 @@ export default function NavBar({ walletAddress, onConnect, onDisconnect, connect
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const shortAddr = walletAddress ? `${walletAddress.substring(0, 10)}...${walletAddress.slice(-6)}` : null;
+  const safeAddr = typeof walletAddress === "string" ? walletAddress : (walletAddress ? String(walletAddress) : null);
+  const shortAddr = safeAddr && safeAddr.length > 16
+    ? `${safeAddr.substring(0, 10)}...${safeAddr.slice(-6)}`
+    : (safeAddr || null);
 
   return (
     <header className={styles.header}>

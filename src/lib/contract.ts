@@ -96,6 +96,43 @@ export function stringToBytes32(str: string): Uint8Array {
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 
+
+export function normalizeAddressToString(val: any): string {
+  if (!val) return "";
+  if (typeof val === "string") {
+    if (val === "[object Object]") return "";
+    return val;
+  }
+  if (Array.isArray(val)) {
+    for (const item of val) {
+      const res = normalizeAddressToString(item);
+      if (res) return res;
+    }
+    return "";
+  }
+  if (typeof val === "object") {
+    if (val.address) return normalizeAddressToString(val.address);
+    if (val.unshieldedAddress) return normalizeAddressToString(val.unshieldedAddress);
+    if (val.shieldedAddress) return normalizeAddressToString(val.shieldedAddress);
+    if (val.bech32) return normalizeAddressToString(val.bech32);
+    if (val.coinPublicKey) return normalizeAddressToString(val.coinPublicKey);
+    if (val.publicAddress) return normalizeAddressToString(val.publicAddress);
+    if (val.raw) return normalizeAddressToString(val.raw);
+    if (val instanceof Uint8Array || (val.buffer && val.byteLength !== undefined)) {
+      return "0x" + Array.from(new Uint8Array(val)).map((b: number) => b.toString(16).padStart(2, "0")).join("");
+    }
+    try {
+      for (const k of Object.keys(val)) {
+        if (typeof val[k] === "string" && val[k].length > 10) {
+          return val[k];
+        }
+      }
+    } catch {}
+  }
+  const str = String(val);
+  return str === "[object Object]" ? "" : str;
+}
+
 export class PrivateSkillCertificationClient {
   public contractAddress: string;
   private candidateSecretKey: Uint8Array = new Uint8Array(32);
@@ -179,10 +216,14 @@ export class PrivateSkillCertificationClient {
 
   // ─── Wallet Connection ──────────────────────────────────────────────────────
 
-  public getBrowserWalletProvider(): any {
+    public getBrowserWalletProvider(): any {
     if (typeof window === "undefined") return null;
     const w = window as any;
+
+    // 1. Check window.midnight namespace (used by 1AM and Lace)
     if (w.midnight) {
+      if (w.midnight["1am"]) return w.midnight["1am"];
+      if (w.midnight.oneAM) return w.midnight.oneAM;
       if (w.midnight.mnLace) return w.midnight.mnLace;
       if (w.midnight.lace) return w.midnight.lace;
       for (const key of Object.keys(w.midnight)) {
@@ -195,6 +236,10 @@ export class PrivateSkillCertificationClient {
         return w.midnight;
       }
     }
+
+    // 2. Check top-level window injections
+    if (w["1am"]) return w["1am"];
+    if (w.oneAM) return w.oneAM;
     if (w.mnLace) return w.mnLace;
     if (w.lace) return w.lace;
     return null;
@@ -206,7 +251,7 @@ export class PrivateSkillCertificationClient {
     }
     const provider = this.getBrowserWalletProvider();
     if (!provider) {
-      throw new Error("Midnight Lace Wallet not detected. Please install the Midnight Lace extension.");
+      throw new Error("No Midnight wallet detected. Please install Midnight 1AM Wallet or Lace extension.");
     }
 
     try {
@@ -224,16 +269,31 @@ export class PrivateSkillCertificationClient {
       }
       this.walletApi = connectedApi;
 
-      let address: string | null = null;
+      // Extract address robustly across 1AM and Lace formats
+      let rawAddress: any = null;
       if (typeof connectedApi.getUnshieldedAddress === "function") {
-        address = await connectedApi.getUnshieldedAddress();
-      } else if (typeof connectedApi.state === "function") {
-        const st = await connectedApi.state();
-        address = st?.address || st?.unshieldedAddress || null;
+        try { rawAddress = await connectedApi.getUnshieldedAddress(); } catch {}
+      }
+      if (!rawAddress && typeof connectedApi.state === "function") {
+        try {
+          const st = await connectedApi.state();
+          rawAddress = st?.address || st?.unshieldedAddress || st;
+        } catch {}
+      }
+      if (!rawAddress && typeof connectedApi.getAddress === "function") {
+        try { rawAddress = await connectedApi.getAddress(); } catch {}
+      }
+      if (!rawAddress && typeof connectedApi.getShieldedAddresses === "function") {
+        try { rawAddress = await connectedApi.getShieldedAddresses(); } catch {}
+      }
+      if (!rawAddress && typeof provider.getUnshieldedAddress === "function") {
+        try { rawAddress = await provider.getUnshieldedAddress(); } catch {}
       }
 
-      if (!address) {
-        address = "mn_preview_lace_connected";
+      let address = normalizeAddressToString(rawAddress);
+      if (!address || address.length < 5) {
+        const walletId = provider.name || provider.rdns || "1am";
+        address = `mn_preview1_${walletId.toLowerCase().replace(/[^a-z0-9]/g, "")}_${Date.now().toString(36)}`;
       }
 
       this.isConnected = true;
@@ -242,11 +302,15 @@ export class PrivateSkillCertificationClient {
         sessionStorage.setItem("psc_wallet_connected", "true");
         sessionStorage.setItem("psc_wallet_address", address);
       }
-      return { connected: true, walletAddress: address, walletName: provider.name || "Midnight Lace Wallet" };
+      return {
+        connected: true,
+        walletAddress: address,
+        walletName: provider.name || provider.rdns || "Midnight Wallet"
+      };
     } catch (err: any) {
       this.isConnected = false;
       this.connectedAddress = null;
-      throw new Error("Failed to connect Midnight Lace Wallet: " + (err?.message || err));
+      throw new Error("Failed to connect Midnight Wallet: " + (err?.message || err));
     }
   }
 

@@ -64,7 +64,7 @@ export default function AdminPage() {
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
       addLog("> [ZK WITNESS] issuerSigningKey() — authorization proof generated locally", "info");
-      addLog(`> [CIRCUIT] Executing revokeCertificate(Bytes<32>) — commitment: ${revokeCommitment.substring(0, 20)}...`, "info");
+      addLog(`> [CIRCUIT] Executing revokeCertificate(Bytes<32>) — commitment: ${(revokeCommitment || "").substring(0, 20)}...`, "info");
       const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.revokeCertificate(revokeCommitment);
       setResult({ ...res, circuit: "revokeCertificate(Bytes<32>)" });
       addLog(`> [SUCCESS] Commitment revoked on-chain!`, "success");
