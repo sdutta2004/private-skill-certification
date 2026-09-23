@@ -246,6 +246,7 @@ npm start
 - [x] **Compact v0.23**: 6 ZK circuits and 8 ledger fields
 - [x] **No Simulations**: All cryptographic commitments derived via formal SHA-256 / Blake2s standards
 - [x] **Verified Contract**: [0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f)
+- [x] **Live Application**: [https://private-skill-certification-xfp3.vercel.app/](https://private-skill-certification-xfp3.vercel.app/)
 - [x] **10/10 Vitest Tests**: Passing
 - [x] **Next.js 14 Build**: Clean static generation
 - [x] **YouTube Demo Video**: [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4)
