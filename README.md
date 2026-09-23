@@ -114,6 +114,131 @@ Built on Midnight Network's Compact zero-knowledge smart contracts, candidates g
 
 ---
 
+
+---
+
+## 🛠️ Complete Setup & Installation Guide
+
+Follow these comprehensive step-by-step instructions to clone, configure, compile, test, and deploy Private Skill Certification locally.
+
+### 1. Prerequisites
+Ensure the following tools and environments are installed on your workstation:
+- **Node.js**: `v20.x` or `v22.x` (Recommended: `v22.23.1` or later, verify via `node -v`)
+- **npm**: `v9.x` or higher (verify via `npm -v`)
+- **Git**: For source version control
+- **Midnight Lace Wallet Extension**: Install the official extension from the Chrome Web Store and set your active network to **Midnight Preview Testnet**.
+- **Docker Desktop** *(Optional)*: For running a local zero-knowledge proof server container (`midnightntwrk/proof-server:8.1.0`).
+
+---
+
+### 2. Clone & Install Dependencies
+
+```bash
+# Clone the repository
+git clone https://github.com/sdutta2004/private-skill-certification.git
+
+# Enter project directory
+cd private-skill-certification
+
+# Install dependencies cleanly
+npm install
+```
+
+---
+
+### 3. Midnight Lace Wallet Setup & Faucet Funding
+
+1. Open your browser and launch the **Midnight Lace Extension**.
+2. Switch the active network dropdown to **Midnight Preview Testnet**.
+3. Fund your testnet address using the official Midnight Preview Faucet:
+   - **Faucet URL**: [https://faucet.preview.midnight.network](https://faucet.preview.midnight.network)
+4. Ensure your Lace wallet account is unlocked prior to executing transactions on the dApp.
+
+---
+
+### 4. Local Proof Server (Docker — Optional)
+
+To generate zero-knowledge proofs locally instead of using the remote proving server:
+
+```bash
+# Start official Midnight proof server container
+docker run -d -p 6300:6300 --name midnight-proof-server midnightntwrk/proof-server:8.1.0
+
+# Verify health status
+curl http://localhost:6300/health
+```
+
+---
+
+### 5. Compact Smart Contract Compilation
+
+Compile the Compact smart contract source code and verify the managed schema and artifacts:
+
+```bash
+npm run compile:compact
+```
+
+**Compilation Output:**
+```text
+=============================================================
+ Midnight Compact Contract Compilation & Verification
+ Contract: contracts/private_skill_certification.compact
+=============================================================
+[1/4] Loaded Compact source (6138 bytes).
+[2/4] Compact source validated: 6 circuits, 5 witnesses, 8 ledger fields present.
+[3/4] Managed contract-info.json schema matches contract AST.
+[4/4] Proving keys, verifying keys, and runtime artifacts validated.
+>>> Compact compilation check PASSED!
+```
+
+---
+
+### 6. Run Automated Test Suite
+
+Execute the 22 automated tests covering circuit execution, witness isolation, ledger state transitions, and live Preview indexer E2E verification:
+
+```bash
+npm test
+```
+
+**Test Execution Results:**
+```text
+ ✓ tests/counter.test.ts (3 tests)
+ ✓ tests/private_skill_certification.test.ts (16 tests)
+ ✓ tests/preview_e2e.test.ts (3 tests)
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+```
+
+---
+
+### 7. Run Development Server
+
+Launch the Next.js local development server:
+
+```bash
+npm run dev
+```
+
+Open your browser and navigate to `http://localhost:3000`.
+
+---
+
+### 8. Production Bundle & Verification
+
+Build the production bundle and generate static pages:
+
+```bash
+# Create optimized production build
+npm run build
+
+# Start production server locally
+npm start
+```
+
+---
+
 ## Verification Checklist
 
 - [x] **Midnight.js SDK**: Integrated with `@midnight-ntwrk/dapp-connector-api`, `@midnight-ntwrk/compact-runtime`
