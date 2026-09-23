@@ -23,11 +23,15 @@ export default function ExplorerPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const rows = state ? [
+    const rows = state ? [
     { label: "Total Certificates Issued", value: state.certificateCount, mono: false, color: "#10b981" },
+    { label: "Total Certificates Revoked", value: state.revokedCount, mono: false, color: "#ef4444" },
+    { label: "Active Session Epoch Nonce", value: state.activeSession, mono: false, color: "#f59e0b" },
     { label: "Active Skill Certification ID", value: state.skillId, mono: true, color: "#a78bfa" },
-    { label: "Last Certification Commitment", value: state.lastCertificationCommitment, mono: true, color: "#06b6d4" },
-    { label: "Active Session Epoch", value: state.activeSession, mono: false, color: "#f59e0b" },
+    { label: "Issuer Authority Commitment", value: state.issuerCommitment, mono: true, color: "#8b5cf6" },
+    { label: "Last Issued ZK Commitment", value: state.lastCertificationCommitment, mono: true, color: "#06b6d4" },
+    { label: "Last Revoked ZK Commitment", value: state.lastRevokedCommitment, mono: true, color: "#f43f5e" },
+    { label: "Certification Passing Threshold", value: state.certificationThreshold + " / 100", mono: false, color: "#eab308" },
   ] : [];
 
   return (

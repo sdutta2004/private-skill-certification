@@ -32,7 +32,7 @@ export default function AdminPage() {
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
       addLog(`> [CIRCUIT] Executing resetCertification("${skillId}", threshold=${resetThreshold})...`, "info");
-      const res = await getClient().resetCertification(skillId, resetThreshold);
+      const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.resetCertification(skillId, resetThreshold);
       setResult({ ...res, circuit: "resetCertification(Bytes<32>, Uint<32>)" });
       addLog(`> [SUCCESS] Certification reset! New Skill ID: ${res.newSkillId}`, "success");
       addLog(`> [THRESHOLD] New passing threshold set: ${res.newThreshold}/100`, "success");
@@ -65,7 +65,7 @@ export default function AdminPage() {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
       addLog("> [ZK WITNESS] issuerSigningKey() — authorization proof generated locally", "info");
       addLog(`> [CIRCUIT] Executing revokeCertificate(Bytes<32>) — commitment: ${revokeCommitment.substring(0, 20)}...`, "info");
-      const res = await getClient().revokeCertificate(revokeCommitment);
+      const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.revokeCertificate(revokeCommitment);
       setResult({ ...res, circuit: "revokeCertificate(Bytes<32>)" });
       addLog(`> [SUCCESS] Commitment revoked on-chain!`, "success");
       addLog(`> [REVOKED] ${res.revokedCommitment}`, "success");
@@ -79,7 +79,7 @@ export default function AdminPage() {
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
       addLog("> [CIRCUIT] Executing incrementSession() — invalidating stale proofs...", "info");
-      const res = await getClient().incrementSession();
+      const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.incrementSession();
       setResult({ ...res, circuit: "incrementSession()" });
       addLog(`> [SUCCESS] Session incremented! TxHash: ${res.txHash}`, "success");
     } catch (err: any) { addLog(`> [ERROR] ${err?.message || err}`, "error"); }
