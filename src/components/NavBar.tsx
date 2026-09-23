@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -12,10 +12,19 @@ const links = [
   { href: "/inspector", label: "ZK Inspector" },
 ];
 
-export default function NavBar({ walletAddress, onConnect, onDisconnect, connecting }: {
+export default function NavBar({
+  walletAddress,
+  walletName = "1AM Wallet",
+  isApproved = false,
+  onOpenConnect,
+  onOpenDetails,
+  connecting
+}: {
   walletAddress: string | null;
-  onConnect: () => void;
-  onDisconnect: () => void;
+  walletName?: string;
+  isApproved?: boolean;
+  onOpenConnect: () => void;
+  onOpenDetails: () => void;
   connecting: boolean;
 }) {
   const pathname = usePathname();
@@ -46,15 +55,52 @@ export default function NavBar({ walletAddress, onConnect, onDisconnect, connect
             <span className={styles.netDot} />
             <span>Midnight Preview</span>
           </div>
+
           {walletAddress ? (
-            <button className="btn-secondary" onClick={onDisconnect} title={walletAddress} style={{ fontFamily: "monospace", fontSize: "0.8rem", padding: "0.4rem 0.9rem" }}>
-              🔑 {shortAddr}
+            <button
+              className="btn-secondary"
+              onClick={onOpenDetails}
+              title={walletAddress}
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.8rem",
+                padding: "0.4rem 0.9rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                border: "1px solid rgba(16,185,129,0.4)",
+                background: "rgba(16,185,129,0.08)",
+                color: "#f1f5f9"
+              }}
+            >
+              <span style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "#10b981",
+                boxShadow: "0 0 6px #10b981",
+                display: "inline-block"
+              }} />
+              <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.75rem" }}>
+                {walletName?.includes("1AM") ? "1AM" : "MIDNIGHT"}
+              </span>
+              <span>{shortAddr}</span>
             </button>
           ) : (
-            <button className="btn-primary" onClick={onConnect} disabled={connecting} style={{ padding: "0.45rem 1.1rem", fontSize: "0.85rem" }}>
-              {connecting ? <><span className="spinner" /> Connecting...</> : "Connect Wallet"}
+            <button
+              className="btn-primary"
+              onClick={onOpenConnect}
+              disabled={connecting}
+              style={{ padding: "0.45rem 1.1rem", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              {connecting ? (
+                <><span className="spinner" /> Connecting...</>
+              ) : (
+                <>🛡️ Connect 1AM Wallet</>
+              )}
             </button>
           )}
+
           <button className={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
             <span /><span /><span />
           </button>

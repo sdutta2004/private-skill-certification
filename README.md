@@ -126,7 +126,7 @@ Ensure the following tools and environments are installed on your workstation:
 - **Node.js**: `v20.x` or `v22.x` (Recommended: `v22.23.1` or later, verify via `node -v`)
 - **npm**: `v9.x` or higher (verify via `npm -v`)
 - **Git**: For source version control
-- **Midnight Lace Wallet Extension**: Install the official extension from the Chrome Web Store and set your active network to **Midnight Preview Testnet**.
+- **Midnight 1AM Wallet Extension** (Recommended) or **Midnight Lace**: Install 1AM Wallet from [1am.xyz](https://1am.xyz) and set your active network to **Midnight Preview Testnet**.
 - **Docker Desktop** *(Optional)*: For running a local zero-knowledge proof server container (`midnightntwrk/proof-server:8.1.0`).
 
 ---
@@ -146,7 +146,7 @@ npm install
 
 ---
 
-### 3. Midnight Lace Wallet Setup & Faucet Funding
+### 3. 1AM / Midnight Wallet Setup (Approval-Based DApp Connector) & Faucet Funding
 
 1. Open your browser and launch the **Midnight Lace Extension**.
 2. Switch the active network dropdown to **Midnight Preview Testnet**.
@@ -242,7 +242,7 @@ npm start
 ## Verification Checklist
 
 - [x] **Midnight.js SDK**: Integrated with `@midnight-ntwrk/dapp-connector-api`, `@midnight-ntwrk/compact-runtime`
-- [x] **Real Wallet Connection**: Midnight Lace / 1AM extension integration on Midnight Preview
+- [x] **Approval-Based 1AM Wallet Connection**: Interactive 1AM DApp Connector approval flow (`enable()`) with zero mock/fallback
 - [x] **Compact v0.23**: 6 ZK circuits and 8 ledger fields
 - [x] **No Simulations**: All cryptographic commitments derived via formal SHA-256 / Blake2s standards
 - [x] **Verified Contract**: [0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f)

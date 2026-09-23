@@ -23,8 +23,13 @@ export default function IssueCertificatePage() {
     e.preventDefault();
     setLoading(true); setError(null); setResult(null); setLogs([]);
     try {
-      addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
+      addLog("> [WALLET] Verifying active 1AM Wallet approval...", "info");
       const client = getClient();
+      if (!client.isConnected || !client.walletApi) {
+        addLog("> [APPROVAL REQUIRED] Requesting 1AM Wallet DApp Connector approval popup...", "info");
+        await client.connectWallet();
+      }
+      addLog(`> [WALLET APPROVED] Verified 1AM Wallet active: ${client.connectedAddress}`, "success");
       client.setCandidateSecretKey(candidateKey || "anonymous_candidate_key_default_2026");
       client.setCertificationRecord(certRecord || "assessment_verified_payload_cs");
       client.setCandidateScore(candidateScore);

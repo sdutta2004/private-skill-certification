@@ -6,7 +6,9 @@ import {
   NETWORK_CONFIG,
   bytesToHex,
   hexToBytes,
-  stringToBytes32
+  stringToBytes32,
+  getAvailableWallets,
+  get1AMWalletProvider
 } from '../src/lib/contract';
 import { deployPSCContract } from '../src/integration/deploy';
 
@@ -243,6 +245,70 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     expect(typeof client.setIssuerCommitment).toBe('function');
     expect(typeof client.resetCertification).toBe('function');
     expect(typeof client.incrementSession).toBe('function');
+  });
+
+  it('17. 1AM Wallet Discovery: getAvailableWallets discovers injected providers', () => {
+    (global as any).window = {
+      midnight: {
+        '1AM': {
+          name: '1AM Wallet',
+          rdns: 'io.1am.wallet',
+          enable: async () => ({}),
+          connect: async () => ({}),
+        },
+        mnLace: {
+          name: 'Lace',
+          rdns: 'io.lace.wallet',
+          enable: async () => ({}),
+        }
+      }
+    };
+
+    const wallets = getAvailableWallets();
+    expect(wallets.length).toBeGreaterThanOrEqual(2);
+    const oneAm = wallets.find(w => w.is1AM);
+    expect(oneAm).toBeDefined();
+    expect(oneAm?.name).toBe('1AM Wallet');
+
+    const provider = get1AMWalletProvider();
+    expect(provider).toBeDefined();
+    expect(provider.name).toBe('1AM Wallet');
+
+    delete (global as any).window;
+  });
+
+  it('18. 1AM Approval Connection: simulateApprovalConnect establishes verified session', () => {
+    const client = new PrivateSkillCertificationClient();
+    const conn = client.simulateApprovalConnect('mn_addr_preview1_1am_test_candidate_xyz');
+
+    expect(conn.connected).toBe(true);
+    expect(conn.verified).toBe(true);
+    expect(conn.walletAddress).toBe('mn_addr_preview1_1am_test_candidate_xyz');
+    expect(conn.walletName).toContain('1AM Wallet');
+    expect(client.isApproved).toBe(true);
+    expect(client.isConnected).toBe(true);
+
+    const status = client.getWalletStatus();
+    expect(status.approved).toBe(true);
+    expect(status.connected).toBe(true);
+    expect(status.address).toBe('mn_addr_preview1_1am_test_candidate_xyz');
+  });
+
+  it('19. Disconnect Cleans Session: disconnectWallet resets active approval', () => {
+    const client = new PrivateSkillCertificationClient();
+    client.simulateApprovalConnect();
+    expect(client.isConnected).toBe(true);
+
+    const disconn = client.disconnectWallet();
+    expect(disconn.connected).toBe(false);
+    expect(client.isConnected).toBe(false);
+    expect(client.isApproved).toBe(false);
+    expect(client.connectedAddress).toBeNull();
+  });
+
+  it('20. Zero Fallback: connectWallet in Node environment throws without synthetic address', async () => {
+    const client = new PrivateSkillCertificationClient();
+    await expect(client.connectWallet()).rejects.toThrow('Browser environment required');
   });
 
 });

@@ -30,9 +30,15 @@ export default function AdminPage() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault(); setLoadingReset(true); setLogs([]); setResult(null);
     try {
-      addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
+      addLog("> [WALLET] Verifying active 1AM Wallet approval...", "info");
+      const client = getClient();
+      if (!client.isConnected || !client.walletApi) {
+        addLog("> [APPROVAL REQUIRED] Requesting 1AM Wallet approval...", "info");
+        await client.connectWallet();
+      }
+      addLog(`> [WALLET APPROVED] Verified 1AM Wallet active: ${client.connectedAddress}`, "success");
       addLog(`> [CIRCUIT] Executing resetCertification("${skillId}", threshold=${resetThreshold})...`, "info");
-      const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.resetCertification(skillId, resetThreshold);
+      client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.resetCertification(skillId, resetThreshold);
       setResult({ ...res, circuit: "resetCertification(Bytes<32>, Uint<32>)" });
       addLog(`> [SUCCESS] Certification reset! New Skill ID: ${res.newSkillId}`, "success");
       addLog(`> [THRESHOLD] New passing threshold set: ${res.newThreshold}/100`, "success");
@@ -44,10 +50,15 @@ export default function AdminPage() {
   const handleIssuerSetup = async (e: React.FormEvent) => {
     e.preventDefault(); setLoadingIssuer(true); setLogs([]); setResult(null);
     try {
-      addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
+      addLog("> [WALLET] Verifying active 1AM Wallet approval...", "info");
+      const client = getClient();
+      if (!client.isConnected || !client.walletApi) {
+        addLog("> [APPROVAL REQUIRED] Requesting 1AM Wallet approval...", "info");
+        await client.connectWallet();
+      }
+      addLog(`> [WALLET APPROVED] Verified 1AM Wallet active: ${client.connectedAddress}`, "success");
       addLog("> [ZK WITNESS] issuerSigningKey() — derived from private key, never disclosed", "info");
       addLog(`> [CIRCUIT] Executing setIssuerCommitment(Uint<32>) — threshold=${issuerThreshold}...`, "info");
-      const client = getClient();
       client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026");
       const res = await client.setIssuerCommitment(issuerThreshold);
       setResult({ ...res, circuit: "setIssuerCommitment(Uint<32>)" });
@@ -62,10 +73,16 @@ export default function AdminPage() {
   const handleRevoke = async (e: React.FormEvent) => {
     e.preventDefault(); setLoadingRevoke(true); setLogs([]); setResult(null);
     try {
-      addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
+      addLog("> [WALLET] Verifying active 1AM Wallet approval...", "info");
+      const client = getClient();
+      if (!client.isConnected || !client.walletApi) {
+        addLog("> [APPROVAL REQUIRED] Requesting 1AM Wallet approval...", "info");
+        await client.connectWallet();
+      }
+      addLog(`> [WALLET APPROVED] Verified 1AM Wallet active: ${client.connectedAddress}`, "success");
       addLog("> [ZK WITNESS] issuerSigningKey() — authorization proof generated locally", "info");
       addLog(`> [CIRCUIT] Executing revokeCertificate(Bytes<32>) — commitment: ${(revokeCommitment || "").substring(0, 20)}...`, "info");
-      const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.revokeCertificate(revokeCommitment);
+      client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.revokeCertificate(revokeCommitment);
       setResult({ ...res, circuit: "revokeCertificate(Bytes<32>)" });
       addLog(`> [SUCCESS] Commitment revoked on-chain!`, "success");
       addLog(`> [REVOKED] ${res.revokedCommitment}`, "success");
@@ -77,9 +94,15 @@ export default function AdminPage() {
   const handleIncrement = async () => {
     setLoadingSession(true); setLogs([]); setResult(null);
     try {
-      addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
+      addLog("> [WALLET] Verifying active 1AM Wallet approval...", "info");
+      const client = getClient();
+      if (!client.isConnected || !client.walletApi) {
+        addLog("> [APPROVAL REQUIRED] Requesting 1AM Wallet approval...", "info");
+        await client.connectWallet();
+      }
+      addLog(`> [WALLET APPROVED] Verified 1AM Wallet active: ${client.connectedAddress}`, "success");
       addLog("> [CIRCUIT] Executing incrementSession() — invalidating stale proofs...", "info");
-      const client = getClient(); client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.incrementSession();
+      client.setIssuerKey(issuerKey || "issuer_default_signing_key_2026"); const res = await client.incrementSession();
       setResult({ ...res, circuit: "incrementSession()" });
       addLog(`> [SUCCESS] Session incremented! TxHash: ${res.txHash}`, "success");
     } catch (err: any) { addLog(`> [ERROR] ${err?.message || err}`, "error"); }
