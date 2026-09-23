@@ -1,4 +1,4 @@
-﻿name: CI/CD Pipeline — Private Skill Certification
+name: CI/CD Pipeline — Private Skill Certification
 
 on:
   push:
@@ -23,7 +23,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Vitest Unit Tests
+      - name: Validate and Compile Compact Contract
+        run: npm run compile:compact
+
+      - name: Run Vitest Unit & E2E Tests
         run: npm test
 
       - name: Build Web Platform
