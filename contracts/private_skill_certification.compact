@@ -1,60 +1,56 @@
-pragma language_version 0.23;
+pragma language_version >= 0.20;
 import CompactStandardLibrary;
 
-// ─── Ledger State ─────────────────────────────────────────────────────────────
-// Public counters and anchors stored on-chain
-export ledger certificateCount: Counter;           // Total certificates ever issued
-export ledger revokedCount: Counter;               // Total certificates revoked
-export ledger activeSession: Counter;              // Monotonic session nonce (for replay protection)
-export ledger skillId: Bytes<32>;                  // Current active skill program ID
-export ledger issuerCommitment: Bytes<32>;         // Issuer's public key commitment (authority anchor)
-export ledger lastCertificationCommitment: Bytes<32>; // Most recent issued ZK commitment
-export ledger lastRevokedCommitment: Bytes<32>;    // Most recent revoked commitment hash
-export ledger certificationThreshold: Uint<32>;   // Minimum score threshold set by issuer
+// ─── Ledger State (8 Public Fields) ──────────────────────────────────────────
+export ledger certificateCount: Counter;              // Total certificates issued
+export ledger revokedCount: Counter;                  // Total certificates revoked
+export ledger activeSession: Counter;                 // Monotonic session epoch nonce (anti-replay)
+export ledger skillId: Bytes<32>;                     // Current active skill program identifier
+export ledger issuerCommitment: Bytes<32>;            // Issuer root public key commitment anchor
+export ledger lastCertificationCommitment: Bytes<32>; // Most recent issued ZK commitment hash
+export ledger lastRevokedCommitment: Bytes<32>;       // Most recent revoked commitment hash
+export ledger certificationThreshold: Uint<32>;      // Minimum passing score threshold set by issuer
 
-// ─── Witnesses (Private Inputs — Never Disclosed On-Chain) ────────────────────
-witness candidateSecretKey(): Bytes<32>;     // Candidate's private secret key
-witness scoreProofNonce(): Bytes<32>;        // Entropy nonce for ZK commitment binding
-witness certificationRecordHash(): Bytes<32>; // SHA-256 of the full assessment record
-witness candidateScoreProof(): Uint<32>;     // Candidate's private exam score (compared to threshold)
-witness issuerSigningKey(): Bytes<32>;       // Issuer's private signing key (authorizes admin ops)
+// ─── Witnesses (5 Private Inputs — Never Disclosed On-Chain) ──────────────────
+witness candidateSecretKey(): Bytes<32>;        // Candidate private secret salt
+witness scoreProofNonce(): Bytes<32>;           // Ephemeral blinding entropy nonce for commitment
+witness certificationRecordHash(): Bytes<32>;    // SHA-256 cryptographic hash of exam transcript
+witness candidateScoreProof(): Uint<32>;        // Candidate private score value (verified vs threshold)
+witness issuerSigningKey(): Bytes<32>;          // Issuer administrative signing key
 
 // ─── Circuit 1: issueCertificate ──────────────────────────────────────────────
-// Candidate privately proves they passed the exam (score >= threshold) and binds
-// their identity, score nonce, and assessment record into a ZK commitment.
-// Only the commitment hash is disclosed on-chain — no identity, score, or record.
+// Candidate privately proves score >= certificationThreshold and binds candidate key,
+// single-use nonce, transcript hash, and session binding into the ZK commitment.
 export circuit issueCertificate(expectedSkillId: Bytes<32>): Bytes<32> {
-  // Verify this candidate is certifying for the currently active skill program
   assert(skillId == expectedSkillId, "Skill program ID mismatch: certification rejected");
 
-  // Private witness resolution — these values NEVER leave the device
   const candidateKey = candidateSecretKey();
   const nonce = scoreProofNonce();
   const certRecord = certificationRecordHash();
   const candidateScore = candidateScoreProof();
 
-  // ZK Score Threshold Enforcement:
-  // Prove the candidate's score meets or exceeds the issuer-set threshold
-  // WITHOUT disclosing the actual score on-chain.
+  // ZK Score Threshold Assertion
   assert(candidateScore >= certificationThreshold, "Score below certification threshold: proof rejected");
+  assert(nonce != [0; 32], "Invalid score proof nonce: non-zero nonce required");
 
-  // Derive a unique session binding to prevent cross-session commitment reuse
-  const sessionBytes = pad(32, "psc:session:binding");
+  // Derive unique session binding incorporating nonce and epoch domain tag
+  const sessionNonceBinding = persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "psc:session:binding:v2"),
+    nonce
+  ]);
 
-  // Build the multi-input ZK commitment hash (Vector<5, Bytes<32>>):
-  // Hash(domain_tag || candidateKey || nonce || certRecord || session)
+  // Compute multi-input ZK commitment hash binding candidate identity, nonce, record, and session
   const certificationCommitment = persistentHash<Vector<5, Bytes<32>>>([
     pad(32, "psc:skill:certification:v2"),
     candidateKey,
     nonce,
     certRecord,
-    sessionBytes
+    sessionNonceBinding
   ]);
 
-  // Increment total certificate count
   certificateCount.increment(1);
+  activeSession.increment(1);
 
-  // Disclose ONLY the commitment hash — all private inputs remain hidden
   const disclosedCommitment = disclose(certificationCommitment);
   lastCertificationCommitment = disclosedCommitment;
 
@@ -62,34 +58,25 @@ export circuit issueCertificate(expectedSkillId: Bytes<32>): Bytes<32> {
 }
 
 // ─── Circuit 2: verifyCertificate ─────────────────────────────────────────────
-// Any on-chain observer can verify whether a claimed commitment matches the
-// most recently stored on-chain commitment. Used by employers / verifiers.
+// Verifies whether a claimed commitment matches the on-chain stored commitment.
 export circuit verifyCertificate(claimedCommitment: Bytes<32>): Boolean {
-  const matches = lastCertificationCommitment == claimedCommitment;
+  const matches = (claimedCommitment == lastCertificationCommitment);
   return disclose(matches);
 }
 
 // ─── Circuit 3: revokeCertificate ─────────────────────────────────────────────
-// Issuer revokes a specific certification commitment (e.g., fraud detected).
-// The issuer must supply their private signing key as a witness for authorization.
-// Revoked commitment is stored on-chain for verifier reference.
+// Authorized issuer revokes a specific certification commitment.
 export circuit revokeCertificate(commitmentToRevoke: Bytes<32>): Bytes<32> {
-  // Issuer private key authorization via ZK witness
   const issuerKey = issuerSigningKey();
-
-  // Derive the expected issuer commitment from the private signing key
   const derivedIssuerCommitment = persistentHash<Vector<2, Bytes<32>>>([
     pad(32, "psc:issuer:authority:v1"),
     issuerKey
   ]);
-
-  // Verify that the signer is the registered issuer authority
   assert(derivedIssuerCommitment == issuerCommitment, "Unauthorized: issuer commitment mismatch");
 
-  // Record the revocation — increment revoked counter
   revokedCount.increment(1);
+  activeSession.increment(1);
 
-  // Store the revoked commitment on-chain for verifier lookups
   const disclosedRevoked = disclose(commitmentToRevoke);
   lastRevokedCommitment = disclosedRevoked;
 
@@ -97,50 +84,54 @@ export circuit revokeCertificate(commitmentToRevoke: Bytes<32>): Bytes<32> {
 }
 
 // ─── Circuit 4: setIssuerCommitment ───────────────────────────────────────────
-// One-time setup (or re-keying): anchors the issuer's authority commitment
-// on-chain from their private signing key. Subsequent admin circuits verify
-// against this public anchor.
+// One-time setup: anchors the issuer's public key commitment and score threshold.
+// Subsequent re-keying is blocked to ensure one-time authority anchoring.
 export circuit setIssuerCommitment(newThreshold: Uint<32>): Bytes<32> {
-  // Derive the issuer's public commitment from their private signing key
   const issuerKey = issuerSigningKey();
+  assert(issuerKey != [0; 32], "Invalid issuer signing key");
 
   const newIssuerCommitment = persistentHash<Vector<2, Bytes<32>>>([
     pad(32, "psc:issuer:authority:v1"),
     issuerKey
   ]);
 
-  // Anchor the new issuer commitment on-chain
+  // Enforce one-time initialization: must not already be anchored
+  assert(issuerCommitment == [0; 32], "Unauthorized: issuer already initialized (one-time initialization only)");
+
   const disclosedCommitment = disclose(newIssuerCommitment);
   issuerCommitment = disclosedCommitment;
-
-  // Update the certification score threshold (issuer-controlled)
   certificationThreshold = newThreshold;
-
-  // Bump session to invalidate any pending stale proofs
   activeSession.increment(1);
 
   return disclosedCommitment;
 }
 
 // ─── Circuit 5: resetCertification ────────────────────────────────────────────
-// Admin resets the active skill program ID and updates the score threshold.
-// The new session nonce invalidates all commitments from previous sessions.
+// Authorized issuer resets the active skill program ID and updates the score threshold.
 export circuit resetCertification(newSkillId: Bytes<32>, newThreshold: Uint<32>): Bytes<32> {
-  // Record the new skill program ID on-chain (public)
+  const issuerKey = issuerSigningKey();
+  const derivedIssuerCommitment = persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "psc:issuer:authority:v1"),
+    issuerKey
+  ]);
+  assert(derivedIssuerCommitment == issuerCommitment, "Unauthorized: issuer authority required to reset");
+
   skillId = disclose(newSkillId);
-
-  // Update the score threshold for the new program
   certificationThreshold = newThreshold;
-
-  // Increment session to create a clean epoch boundary
   activeSession.increment(1);
 
   return skillId;
 }
 
 // ─── Circuit 6: incrementSession ──────────────────────────────────────────────
-// Bumps the session counter to invalidate pending stale proofs.
-// Can be called independently (e.g., after a security incident).
+// Issuer-authorized policy: bumps session counter to invalidate stale proofs.
 export circuit incrementSession(): [] {
+  const issuerKey = issuerSigningKey();
+  const derivedIssuerCommitment = persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "psc:issuer:authority:v1"),
+    issuerKey
+  ]);
+  assert(derivedIssuerCommitment == issuerCommitment, "Unauthorized: issuer authority required to increment session");
+
   activeSession.increment(1);
 }
