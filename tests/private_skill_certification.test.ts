@@ -311,4 +311,55 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     await expect(client.connectWallet()).rejects.toThrow('Browser environment required');
   });
 
+  it('21. Dual Verification: verifyCertificate verifies by 32-byte ZK Commitment', async () => {
+    const client = new PrivateSkillCertificationClient();
+    const commitment = '0x36363635363536353635353635363536736b696c6c5f66756c6c737461636b5f';
+    const res = await client.verifyCertificate(commitment);
+
+    expect(res.success).toBe(true);
+    expect(res.matches).toBe(true);
+    expect(res.inputWasTxHash).toBe(false);
+    expect(res.claimedCommitment.toLowerCase()).toBe(commitment.toLowerCase());
+  });
+
+  it('22. Dual Verification: verifyCertificate verifies by On-Chain TxHash', async () => {
+    const client = new PrivateSkillCertificationClient();
+    const txHash = '0x3dc683d2c029dc5753fdecd688ff111265df5bea5f043d264f0d895fa9872371';
+    const res = await client.verifyCertificate(txHash);
+
+    expect(res.success).toBe(true);
+    expect(res.matches).toBe(true);
+    expect(res.inputWasTxHash).toBe(true);
+    expect(res.resolvedTxHash?.toLowerCase()).toBe(txHash.toLowerCase());
+    expect(res.claimedCommitment).toBe('0x36363635363536353635353635363536736b696c6c5f66756c6c737461636b5f');
+  });
+
+  it('23. Local Registry & Issuance Cache: recordIssuedCertificate enables immediate verification', async () => {
+    const client = new PrivateSkillCertificationClient();
+    client.simulateApprovalConnect();
+    client.setCandidateScore(92);
+
+    const issueRes = await client.issueCertificate('skill_fullstack_zk_engineer');
+    expect(issueRes.success).toBe(true);
+    expect(issueRes.commitmentHex).toBeDefined();
+    expect(issueRes.txHash).toBeDefined();
+
+    // Verify by new commitment
+    const verifyCommitment = await client.verifyCertificate(issueRes.commitmentHex);
+    expect(verifyCommitment.matches).toBe(true);
+
+    // Verify by new txHash
+    const verifyTx = await client.verifyCertificate(issueRes.txHash);
+    expect(verifyTx.matches).toBe(true);
+    expect(verifyTx.inputWasTxHash).toBe(true);
+  });
+
+  it('24. Strict Rejection: unknown commitment returns matches: false', async () => {
+    const client = new PrivateSkillCertificationClient();
+    const unknown = '0x9999999999999999999999999999999999999999999999999999999999999999';
+    const res = await client.verifyCertificate(unknown);
+
+    expect(res.success).toBe(true);
+    expect(res.matches).toBe(false);
+  });
 });

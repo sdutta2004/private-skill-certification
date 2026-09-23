@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState } from "react";
 import { getClient } from "../../lib/contract";
 import Link from "next/link";
@@ -49,6 +49,7 @@ export default function IssueCertificatePage() {
       addLog("> [CIRCUIT] Executing issueCertificate(Bytes<32>) on Midnight Network...", "info");
       const res = await client.issueCertificate(skillId);
       setResult(res);
+      setClaimedCommitment(res.commitmentHex);
       addLog(`> [SUCCESS] Certificate issued! TxHash: ${res.txHash}`, "success");
       addLog(`> [COMMITMENT] ZK Commitment: ${res.commitmentHex}`, "success");
       addLog(`> [PRIVACY] Score, identity, record — NEVER disclosed on-chain`, "success");
@@ -62,23 +63,35 @@ export default function IssueCertificatePage() {
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!claimedCommitment.trim()) return;
-    setVerifyLoading(true); setVerifyResult(null);
+  const handleAutoVerify = async (identifier: string) => {
+    if (!identifier.trim()) return;
+    setClaimedCommitment(identifier.trim());
+    setVerifyLoading(true);
+    setVerifyResult(null);
     try {
-      addLog("> [CIRCUIT] Executing verifyCertificate(Bytes<32>) on-chain...", "info");
-      const res = await getClient().verifyCertificate(claimedCommitment.trim());
+      addLog(`> [VERIFY] Initiating verification for: ${identifier.trim().slice(0, 18)}...`, "info");
+      addLog("> [CIRCUIT] Executing verifyCertificate(Bytes<32>) on Midnight Network...", "info");
+      const res = await getClient().verifyCertificate(identifier.trim());
       setVerifyResult(res);
-      addLog(res.matches
-        ? "> [VERIFIED] Commitment matches on-chain record — credential is VALID"
-        : "> [MISMATCH] Commitment does NOT match — credential may be invalid or revoked",
-        res.matches ? "success" : "error");
+      addLog(
+        res.matches
+          ? `> [VERIFIED] Credential is VALID! ${res.inputWasTxHash ? "(Resolved via On-Chain TxHash)" : "(ZK Commitment match)"}`
+          : "> [MISMATCH] Commitment does not match registered state.",
+        res.matches ? "success" : "error"
+      );
+      const el = document.getElementById("verify-section");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
     } catch (err: any) {
-      addLog(`> [ERROR] ${err?.message}`, "error");
+      addLog(`> [ERROR] ${err?.message || err}`, "error");
     } finally {
       setVerifyLoading(false);
     }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimedCommitment.trim()) return;
+    await handleAutoVerify(claimedCommitment.trim());
   };
 
   return (
@@ -217,34 +230,181 @@ export default function IssueCertificatePage() {
             </div>
           ))}
           <p style={{ fontSize: "0.8rem", color: "#10b981", marginTop: "0.75rem", fontWeight: 600 }}>Status: CONFIRMED (Midnight Preview)</p>
+
+          {/* Quick Action & Verification Buttons */}
+          <div style={{ marginTop: "1.25rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center", borderTop: "1px solid rgba(16,185,129,0.2)", paddingTop: "1rem" }}>
+            <button
+              type="button"
+              id="autoVerifyBtn"
+              onClick={() => handleAutoVerify(result.commitmentHex)}
+              className="btn-primary"
+              style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderColor: "#10b981", boxShadow: "0 4px 14px rgba(16,185,129,0.3)" }}
+            >
+              🔍 1-Click Verify Issued Credential
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAutoVerify(result.txHash)}
+              className="btn-secondary"
+              style={{ borderColor: "rgba(56,189,248,0.4)", color: "#38bdf8" }}
+            >
+              ⚡ Verify via TxHash
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(result.commitmentHex);
+                addLog("> [COPIED] ZK Commitment copied to clipboard", "success");
+              }}
+              className="btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "0.45rem 0.8rem" }}
+            >
+              📋 Copy Commitment
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(result.txHash);
+                addLog("> [COPIED] On-Chain TxHash copied to clipboard", "success");
+              }}
+              className="btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "0.45rem 0.8rem" }}
+            >
+              📋 Copy TxHash
+            </button>
+          </div>
         </div>
       )}
 
       {/* Verify Certificate Panel */}
-      <div className="glass-card" style={{ padding: "1.5rem", borderLeft: "3px solid #06b6d4" }}>
+      <div id="verify-section" className="glass-card" style={{ padding: "1.5rem", borderLeft: "3px solid #06b6d4" }}>
         <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#06b6d4", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
           Verify Skill Certificate — verifyCertificate(Bytes&lt;32&gt;)
         </div>
-        <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "1rem" }}>
-          Employers, hiring managers, and institutions can publicly verify whether a candidate's claimed certificate commitment is anchored on-chain without learning test scores or identity.
+        <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "0.75rem" }}>
+          Employers, hiring managers, and institutions can publicly verify whether a candidate's claimed certificate is anchored on-chain without learning test scores or identity.
         </p>
+        <p style={{ fontSize: "0.78rem", color: "#38bdf8", marginBottom: "1rem" }}>
+          💡 <strong>Supports Dual Verification:</strong> Enter either the <strong>ZK Commitment Hash</strong> or the <strong>On-Chain TxHash</strong> below.
+        </p>
+
         <form onSubmit={handleVerify} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <input type="text" id="claimedCommitment" value={claimedCommitment}
+          <input
+            type="text"
+            id="claimedCommitment"
+            value={claimedCommitment}
             onChange={e => setClaimedCommitment(e.target.value)}
-            placeholder="0x... claimed certification commitment hash"
-            style={{ flex: 1, minWidth: "240px" }} />
+            placeholder="0x... (Paste ZK Commitment or On-Chain TxHash)"
+            style={{ flex: 1, minWidth: "260px" }}
+          />
           <button type="submit" className="btn-secondary" disabled={verifyLoading} id="verifyBtn" style={{ whiteSpace: "nowrap" }}>
-            {verifyLoading ? <><span className="spinner" /> Verifying...</> : "Verify On-Chain"}
+            {verifyLoading ? <><span className="spinner" /> Verifying On-Chain...</> : "Verify On-Chain"}
           </button>
         </form>
+
+        {/* Quick Fill Buttons */}
+        {result && (
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Quick Fill:</span>
+            <button
+              type="button"
+              onClick={() => setClaimedCommitment(result.commitmentHex)}
+              style={{ fontSize: "0.72rem", padding: "0.2rem 0.5rem", borderRadius: "4px", background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)", cursor: "pointer" }}
+            >
+              Insert ZK Commitment
+            </button>
+            <button
+              type="button"
+              onClick={() => setClaimedCommitment(result.txHash)}
+              style={{ fontSize: "0.72rem", padding: "0.2rem 0.5rem", borderRadius: "4px", background: "rgba(56,189,248,0.15)", color: "#38bdf8", border: "1px solid rgba(56,189,248,0.3)", cursor: "pointer" }}
+            >
+              Insert TxHash
+            </button>
+          </div>
+        )}
+
+        {/* Verification Result */}
         {verifyResult && (
-          <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "8px",
+          <div style={{
+            marginTop: "1.25rem",
+            padding: "1rem 1.25rem",
+            borderRadius: "8px",
             background: verifyResult.matches ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
-            border: `1px solid ${verifyResult.matches ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}` }}>
-            <p style={{ color: verifyResult.matches ? "#6ee7b7" : "#fca5a5", fontWeight: 700, marginBottom: "0.5rem" }}>
-              {verifyResult.matches ? "✓ VALID — Skill Certificate Verified On-Chain" : "✕ INVALID — Commitment Mismatch"}
-            </p>
-            <div style={{ fontSize: "0.78rem", color: "#64748b" }}>TxHash: <span style={{ color: "#f1f5f9", fontFamily: "monospace" }}>{verifyResult.txHash}</span></div>
+            border: `1px solid ${verifyResult.matches ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+              <span style={{ color: verifyResult.matches ? "#10b981" : "#ef4444", fontSize: "1.1rem" }}>
+                {verifyResult.matches ? "✓" : "✕"}
+              </span>
+              <span style={{ color: verifyResult.matches ? "#6ee7b7" : "#fca5a5", fontWeight: 700, fontSize: "0.98rem" }}>
+                {verifyResult.matches ? "VALID — Skill Certificate Verified On-Chain" : "INVALID — Commitment Mismatch"}
+              </span>
+              {verifyResult.matches && (
+                <span className="badge badge-green" style={{ marginLeft: "auto", fontSize: "0.7rem" }}>
+                  Zero-Knowledge Proof Verified
+                </span>
+              )}
+            </div>
+
+            {verifyResult.inputWasTxHash && verifyResult.matches && (
+              <div style={{
+                fontSize: "0.78rem",
+                color: "#38bdf8",
+                background: "rgba(56,189,248,0.1)",
+                padding: "0.4rem 0.75rem",
+                borderRadius: "6px",
+                marginBottom: "0.75rem",
+                border: "1px solid rgba(56,189,248,0.2)"
+              }}>
+                ℹ️ Input recognized as <strong>On-Chain Transaction Hash</strong>. Automatically mapped and verified against registered ZK Commitment!
+              </div>
+            )}
+
+            {verifyResult.matches ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.78rem" }}>
+                <div>
+                  <span style={{ color: "#64748b" }}>Circuit: </span>
+                  <span style={{ color: "#f1f5f9", fontFamily: "monospace" }}>verifyCertificate(Bytes&lt;32&gt;)</span>
+                </div>
+                <div>
+                  <span style={{ color: "#64748b" }}>ZK Commitment: </span>
+                  <span style={{ color: "#6ee7b7", fontFamily: "monospace", wordBreak: "break-all" }}>
+                    {verifyResult.claimedCommitment}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: "#64748b" }}>On-Chain TxHash: </span>
+                  <span style={{ color: "#94a3b8", fontFamily: "monospace", wordBreak: "break-all" }}>
+                    {verifyResult.txHash || verifyResult.resolvedTxHash || "Confirmed on-chain"}
+                  </span>
+                </div>
+                {verifyResult.skillId && (
+                  <div>
+                    <span style={{ color: "#64748b" }}>Certified Competency: </span>
+                    <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{verifyResult.skillId}</span>
+                  </div>
+                )}
+                <div>
+                  <span style={{ color: "#64748b" }}>Verification Mode: </span>
+                  <span style={{ color: "#10b981", fontWeight: 600 }}>
+                    {verifyResult.verificationMethod === "on-chain-indexer"
+                      ? "Midnight Preview Indexer (Direct Public Ledger State)"
+                      : "Zero-Knowledge Circuit Proof & Cryptographic Witness Anchor"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.5rem" }}>
+                  {verifyResult.details || "The provided identifier does not match any registered on-chain certificate commitment or active session proof."}
+                </p>
+                {result && (
+                  <div style={{ marginTop: "0.75rem", fontSize: "0.78rem", color: "#f59e0b", background: "rgba(245,158,11,0.08)", padding: "0.5rem 0.75rem", borderRadius: "6px", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    💡 Did you just issue a certificate? Click the <strong>&quot;🔍 1-Click Verify Issued Credential&quot;</strong> button above to verify your issued commitment automatically.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

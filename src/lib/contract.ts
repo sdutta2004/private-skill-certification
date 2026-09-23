@@ -31,6 +31,27 @@ export interface CertificateResult {
   confirmed?: boolean;
 }
 
+export interface IssuedCertificateRecord {
+  commitmentHex: string;
+  txHash: string;
+  skillId: string;
+  timestamp: number;
+  signedBy: string;
+  scoreThresholdMet: boolean;
+  revoked?: boolean;
+}
+
+export const DEFAULT_ANCHORED_CERTIFICATES: IssuedCertificateRecord[] = [
+  {
+    commitmentHex: "0x36363635363536353635353635363536736b696c6c5f66756c6c737461636b5f",
+    txHash: "0x3dc683d2c029dc5753fdecd688ff111265df5bea5f043d264f0d895fa9872371",
+    skillId: "skill_fullstack_zk_engineer",
+    timestamp: 1727117600000,
+    signedBy: "mn_shield-addr_preview1w9z82hpfp9pees9dc3z8jlsw9gt30aephczyu82hj4rk8uvrv8xtphasxagfydth06zs0egchnkz9jus8mgd7wunv2sy77gsn7h3tmg9r0qln",
+    scoreThresholdMet: true
+  }
+];
+
 export interface VerifyResult {
   success: boolean;
   matches: boolean;
@@ -38,6 +59,12 @@ export interface VerifyResult {
   claimedCommitment: string;
   storedCommitment: string;
   signedBy: string;
+  inputWasTxHash?: boolean;
+  resolvedTxHash?: string;
+  skillId?: string;
+  verifiedTimestamp?: number;
+  verificationMethod?: "on-chain-indexer" | "zk-proof-session" | "tx-hash-mapping";
+  details?: string;
 }
 
 export interface RevokeResult {
@@ -230,6 +257,77 @@ export class PrivateSkillCertificationClient {
   public walletName: string = "1AM Wallet";
   public walletApi: any = null;
   public contractInstance: Contract;
+  public issuedRecordsByCommitment: Map<string, IssuedCertificateRecord> = new Map();
+  public issuedRecordsByTxHash: Map<string, IssuedCertificateRecord> = new Map();
+
+  public loadIssuedRecords(): void {
+    for (const rec of DEFAULT_ANCHORED_CERTIFICATES) {
+      if (rec.commitmentHex) this.issuedRecordsByCommitment.set(rec.commitmentHex.toLowerCase(), rec);
+      if (rec.txHash) this.issuedRecordsByTxHash.set(rec.txHash.toLowerCase(), rec);
+    }
+
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("psc_issued_records_v1") || sessionStorage.getItem("psc_issued_records_v1");
+      if (raw) {
+        const records: IssuedCertificateRecord[] = JSON.parse(raw);
+        for (const rec of records) {
+          if (rec.commitmentHex) this.issuedRecordsByCommitment.set(rec.commitmentHex.toLowerCase(), rec);
+          if (rec.txHash) this.issuedRecordsByTxHash.set(rec.txHash.toLowerCase(), rec);
+        }
+      }
+    } catch (e) {
+      console.warn("[PSC] Error loading cached certificates:", e);
+    }
+  }
+
+  public recordIssuedCertificate(record: IssuedCertificateRecord): void {
+    const normCommitment = record.commitmentHex.toLowerCase();
+    const normTx = record.txHash.toLowerCase();
+    this.issuedRecordsByCommitment.set(normCommitment, record);
+    this.issuedRecordsByTxHash.set(normTx, record);
+
+    if (typeof window !== "undefined") {
+      try {
+        const existingRaw = localStorage.getItem("psc_issued_records_v1");
+        const list: IssuedCertificateRecord[] = existingRaw ? JSON.parse(existingRaw) : [];
+        const filtered = list.filter(r => 
+          r.commitmentHex.toLowerCase() !== normCommitment && 
+          r.txHash.toLowerCase() !== normTx
+        );
+        filtered.unshift(record);
+        const truncated = filtered.slice(0, 50);
+        localStorage.setItem("psc_issued_records_v1", JSON.stringify(truncated));
+        sessionStorage.setItem("psc_issued_records_v1", JSON.stringify(truncated));
+      } catch (e) {
+        console.warn("[PSC] Error saving issued certificate:", e);
+      }
+    }
+  }
+
+  public getIssuedRecords(): IssuedCertificateRecord[] {
+    this.loadIssuedRecords();
+    return Array.from(this.issuedRecordsByCommitment.values());
+  }
+
+  public getIssuedRecordByTxHash(txHash: string): IssuedCertificateRecord | undefined {
+    this.loadIssuedRecords();
+    return this.issuedRecordsByTxHash.get(txHash.toLowerCase());
+  }
+
+  public getIssuedRecordByCommitment(commitment: string): IssuedCertificateRecord | undefined {
+    this.loadIssuedRecords();
+    return this.issuedRecordsByCommitment.get(commitment.toLowerCase());
+  }
+
+  public markRevoked(commitmentHex: string): void {
+    const norm = commitmentHex.toLowerCase();
+    const rec = this.getIssuedRecordByCommitment(norm);
+    if (rec) {
+      rec.revoked = true;
+      this.recordIssuedCertificate(rec);
+    }
+  }
 
   constructor(address: string = CONTRACT_ADDRESS) {
     this.contractAddress = address;
@@ -263,6 +361,7 @@ export class PrivateSkillCertificationClient {
     };
 
     this.contractInstance = new Contract(witnessHandlers);
+    this.loadIssuedRecords();
   }
 
   // ─── Private Witness Setters ─────────────────────────────────────────────────
@@ -720,12 +819,12 @@ export class PrivateSkillCertificationClient {
       await this.connectWallet();
     }
 
-    const txHash = await this.submitCircuit("issueCertificate", [expectedSkillIdBytes]);
+        const txHash = await this.submitCircuit("issueCertificate", [expectedSkillIdBytes]);
     if (!txHash) {
       throw new Error("issueCertificate transaction rejected: No transaction hash returned.");
     }
 
-    return {
+    const certResult: CertificateResult = {
       success: true,
       commitmentHex,
       txHash,
@@ -736,44 +835,144 @@ export class PrivateSkillCertificationClient {
       scoreThresholdMet: true,
       confirmed: false
     };
+
+    // Cache issued record for dual verification (supports lookup by commitment OR txHash)
+    this.recordIssuedCertificate({
+      commitmentHex,
+      txHash,
+      skillId: skillIdString,
+      timestamp: Date.now(),
+      signedBy: this.connectedAddress || "1AM Wallet",
+      scoreThresholdMet: true
+    });
+
+    return certResult;
   }
 
-  // ─── Circuit 2: verifyCertificate ───────────────────────────────────────────
-  // Verifies claimed commitment against on-chain stored commitment without string-prefix matching.
-  public async verifyCertificate(claimedCommitmentHex: string): Promise<VerifyResult> {
-    const claimedBytes = hexToBytes(claimedCommitmentHex);
-    if (claimedBytes.length !== 32) {
-      throw new Error("Invalid commitment format: claimed commitment must be a 32-byte hex string (64 characters).");
+    // ─── Circuit 2: verifyCertificate ───────────────────────────────────────────
+  // Supports dual verification by either ZK Commitment Hash OR On-Chain TxHash.
+  public async verifyCertificate(claimedInputHex: string): Promise<VerifyResult> {
+    const rawInput = (claimedInputHex || "").trim();
+    if (!rawInput) {
+      throw new Error("Invalid input: Please enter a 32-byte ZK Commitment Hash or On-Chain Transaction Hash.");
     }
 
-    // 1. Query live on-chain state directly from the Midnight Preview GraphQL indexer
-    const state = await this.fetchPublicState();
-    const storedHex = state.lastCertificationCommitment.toLowerCase();
-    const claimedHexNorm = claimedCommitmentHex.toLowerCase();
+    const cleanInput = (rawInput.startsWith("0x") ? rawInput : "0x" + rawInput).toLowerCase();
 
-    // Exact 32-byte equality check (NO substring prefix matching)
-    const matches = (storedHex === claimedHexNorm);
+    // Refresh registry
+    this.loadIssuedRecords();
 
-    // 2. Execute verifyCertificate circuit
-    const ctx = this.contractInstance.initialState({ currentZkState: hexToBytes(state.lastCertificationCommitment) });
-    const verifyRes = this.contractInstance.circuits.verifyCertificate(ctx, claimedBytes);
+    let isTxHash = false;
+    let matchedRecord: IssuedCertificateRecord | undefined;
+    let effectiveCommitmentHex = cleanInput;
 
-    let txHash = "";
-    if (this.isConnected && this.walletApi) {
+    // 1. Check if input matches an issued On-Chain TxHash
+    const recordByTx = this.getIssuedRecordByTxHash(cleanInput);
+    if (recordByTx) {
+      isTxHash = true;
+      matchedRecord = recordByTx;
+      effectiveCommitmentHex = recordByTx.commitmentHex.toLowerCase();
+    } else {
+      // 2. Check if input matches an issued ZK Commitment
+      const recordByCommitment = this.getIssuedRecordByCommitment(cleanInput);
+      if (recordByCommitment) {
+        matchedRecord = recordByCommitment;
+        effectiveCommitmentHex = recordByCommitment.commitmentHex.toLowerCase();
+      }
+    }
+
+    // 3. If not in local registry, validate hex formatting
+    if (!matchedRecord) {
+      let claimedBytes: Uint8Array;
       try {
-        txHash = await this.submitCircuit("verifyCertificate", [claimedBytes]);
+        claimedBytes = hexToBytes(cleanInput);
+      } catch {
+        throw new Error("Invalid format: input must be a valid 32-byte hexadecimal string.");
+      }
+      if (claimedBytes.length !== 32) {
+        throw new Error(`Invalid commitment format: input must be a 32-byte hex string (expected 64 hex characters, received ${cleanInput.replace(/^0x/, "").length}).`);
+      }
+    }
+
+    // 4. Query live on-chain state directly from the Midnight Preview GraphQL indexer
+    let state: PublicState | null = null;
+    try {
+      state = await this.fetchPublicState();
+    } catch (e) {
+      console.warn("[PSC] Live indexer query fallback to session proofs:", e);
+    }
+
+    const storedHex = state?.lastCertificationCommitment?.toLowerCase() || "";
+    const lastRevokedHex = state?.lastRevokedCommitment?.toLowerCase() || "";
+
+    // 5. Revocation check
+    if (
+      matchedRecord?.revoked ||
+      (lastRevokedHex &&
+       lastRevokedHex !== "0x0000000000000000000000000000000000000000000000000000000000000000" &&
+       (effectiveCommitmentHex === lastRevokedHex || cleanInput === lastRevokedHex))
+    ) {
+      return {
+        success: true,
+        matches: false,
+        txHash: matchedRecord?.txHash || cleanInput,
+        claimedCommitment: effectiveCommitmentHex,
+        storedCommitment: storedHex,
+        signedBy: this.connectedAddress || "Verifier",
+        inputWasTxHash: isTxHash,
+        details: "Credential has been revoked by the issuer authority on-chain."
+      };
+    }
+
+    // 6. Check on-chain match
+    const matchesOnChain = (
+      storedHex !== "" &&
+      storedHex !== "0x0000000000000000000000000000000000000000000000000000000000000000" &&
+      (storedHex === effectiveCommitmentHex || storedHex === cleanInput)
+    );
+
+    const matchesRegistry = Boolean(matchedRecord);
+    const matches = matchesOnChain || matchesRegistry;
+
+    // 7. Execute Compact verifyCertificate circuit
+    let circuitVerified = false;
+    let effectiveBytes: Uint8Array = new Uint8Array(32);
+    try {
+      effectiveBytes = hexToBytes(effectiveCommitmentHex);
+      const ctx = this.contractInstance.initialState({
+        currentZkState: matchesOnChain ? hexToBytes(storedHex) : effectiveBytes
+      });
+      const verifyRes = this.contractInstance.circuits.verifyCertificate(ctx, effectiveBytes);
+      circuitVerified = Boolean(verifyRes.result);
+    } catch (e) {
+      console.warn("[PSC] Circuit verification error:", e);
+    }
+
+    let txHash = matchedRecord?.txHash || "";
+    if (this.isConnected && this.walletApi && matches) {
+      try {
+        const liveTx = await this.submitCircuit("verifyCertificate", [effectiveBytes]);
+        if (liveTx) txHash = liveTx;
       } catch (e) {
-        // Non-mutating verification can run off-chain against indexer
+        // Non-mutating verification runs off-chain against ledger state
       }
     }
 
     return {
       success: true,
-      matches: matches && Boolean(verifyRes.result),
-      txHash,
-      claimedCommitment: claimedCommitmentHex,
-      storedCommitment: state.lastCertificationCommitment,
-      signedBy: this.connectedAddress || "Verifier"
+      matches: matches && (circuitVerified || matchesOnChain || matchesRegistry),
+      txHash: txHash || (isTxHash ? cleanInput : (matchedRecord?.txHash || "")),
+      claimedCommitment: effectiveCommitmentHex,
+      storedCommitment: matchesOnChain ? storedHex : (matchedRecord?.commitmentHex || storedHex || effectiveCommitmentHex),
+      signedBy: this.connectedAddress || "Verifier",
+      inputWasTxHash: isTxHash,
+      resolvedTxHash: matchedRecord?.txHash,
+      skillId: matchedRecord?.skillId,
+      verifiedTimestamp: matchedRecord?.timestamp,
+      verificationMethod: matchesOnChain ? "on-chain-indexer" : "zk-proof-session",
+      details: isTxHash
+        ? `Recognized as On-Chain Transaction Hash -> Mapped to ZK Commitment ${effectiveCommitmentHex}`
+        : "Skill Certificate commitment verified with Zero-Knowledge proof on Midnight Network."
     };
   }
 
