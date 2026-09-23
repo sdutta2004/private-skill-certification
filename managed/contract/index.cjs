@@ -2,7 +2,7 @@
 // Authoritative runtime bindings for Private Skill Certification (PSC) Compact contract.
 // Exports all 6 circuits, all 5 witnesses, and complete 8-field public ledger decoding.
 
-export class Contract {
+class Contract {
   constructor(witnesses) {
     if (!witnesses || typeof witnesses !== "object") {
       throw new Error("Contract constructor requires witnesses object");
@@ -122,7 +122,7 @@ export class Contract {
   }
 }
 
-export function ledger(state) {
+function ledger(state) {
   if (state && typeof state === "object") {
     const rawSkillId = state.skillId instanceof Uint8Array ? state.skillId : new Uint8Array(32);
     const rawIssuerCommitment = state.issuerCommitment instanceof Uint8Array ? state.issuerCommitment : new Uint8Array(32);
@@ -152,5 +152,7 @@ export function ledger(state) {
   };
 }
 
-export const pureCircuits = {};
-export const contractReferenceLocations = {};
+const pureCircuits = {};
+const contractReferenceLocations = {};
+
+module.exports = { Contract, ledger, pureCircuits, contractReferenceLocations };

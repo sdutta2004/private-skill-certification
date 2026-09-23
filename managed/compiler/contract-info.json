@@ -1,0 +1,28 @@
+{
+  "contractName": "PrivateSkillCertification",
+  "circuits": [
+    "issueCertificate",
+    "verifyCertificate",
+    "revokeCertificate",
+    "setIssuerCommitment",
+    "resetCertification",
+    "incrementSession"
+  ],
+  "witnesses": [
+    "candidateSecretKey",
+    "scoreProofNonce",
+    "certificationRecordHash",
+    "candidateScoreProof",
+    "issuerSigningKey"
+  ],
+  "ledger": {
+    "certificateCount": "Counter",
+    "revokedCount": "Counter",
+    "activeSession": "Counter",
+    "skillId": "Bytes<32>",
+    "issuerCommitment": "Bytes<32>",
+    "lastCertificationCommitment": "Bytes<32>",
+    "lastRevokedCommitment": "Bytes<32>",
+    "certificationThreshold": "Uint<32>"
+  }
+}

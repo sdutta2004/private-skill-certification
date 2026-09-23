@@ -1,85 +1,37 @@
-import type * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
-
-export type Witnesses<PS> = {
-  candidateSecretKey(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  scoreProofNonce(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  certificationRecordHash(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
-  candidateScoreProof(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
-  issuerSigningKey(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+export interface LedgerState {
+  certificateCount: bigint;
+  revokedCount: bigint;
+  activeSession: bigint;
+  skillId: Uint8Array;
+  issuerCommitment: Uint8Array;
+  lastCertificationCommitment: Uint8Array;
+  lastRevokedCommitment: Uint8Array;
+  certificationThreshold: bigint;
 }
 
-export type ImpureCircuits<PS> = {
-  issueCertificate(context: __compactRuntime.CircuitContext<PS>,
-                   expectedSkillId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  verifyCertificate(context: __compactRuntime.CircuitContext<PS>,
-                    claimedCommitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
-  revokeCertificate(context: __compactRuntime.CircuitContext<PS>,
-                    commitmentToRevoke_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  setIssuerCommitment(context: __compactRuntime.CircuitContext<PS>,
-                      newThreshold_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  resetCertification(context: __compactRuntime.CircuitContext<PS>,
-                     newSkillId_0: Uint8Array,
-                     newThreshold_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  incrementSession(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+export interface Witnesses {
+  candidateSecretKey: (ctx: any) => [any, Uint8Array] | Uint8Array;
+  scoreProofNonce: (ctx: any) => [any, Uint8Array] | Uint8Array;
+  certificationRecordHash: (ctx: any) => [any, Uint8Array] | Uint8Array;
+  candidateScoreProof: (ctx: any) => [any, bigint] | bigint;
+  issuerSigningKey: (ctx: any) => [any, Uint8Array] | Uint8Array;
 }
 
-export type ProvableCircuits<PS> = {
-  issueCertificate(context: __compactRuntime.CircuitContext<PS>,
-                   expectedSkillId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  verifyCertificate(context: __compactRuntime.CircuitContext<PS>,
-                    claimedCommitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
-  revokeCertificate(context: __compactRuntime.CircuitContext<PS>,
-                    commitmentToRevoke_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  setIssuerCommitment(context: __compactRuntime.CircuitContext<PS>,
-                      newThreshold_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  resetCertification(context: __compactRuntime.CircuitContext<PS>,
-                     newSkillId_0: Uint8Array,
-                     newThreshold_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  incrementSession(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+export declare class Contract {
+  constructor(witnesses: Witnesses);
+  circuits: {
+    issueCertificate: (ctx: any, expectedSkillId: Uint8Array) => { result: Uint8Array; context: any };
+    verifyCertificate: (ctx: any, claimedCommitment: Uint8Array) => { result: boolean; context: any };
+    revokeCertificate: (ctx: any, commitmentToRevoke: Uint8Array) => { result: Uint8Array; context: any };
+    setIssuerCommitment: (ctx: any, newThreshold: number | bigint) => { result: Uint8Array; context: any };
+    resetCertification: (ctx: any, newSkillId: Uint8Array, newThreshold: number | bigint) => { result: Uint8Array; context: any };
+    incrementSession: (ctx: any) => { result: any[]; context: any };
+  };
+  impureCircuits: Record<string, Function>;
+  provableCircuits: Record<string, Function>;
+  initialState(ctx?: any): any;
 }
 
-export type PureCircuits = {
-}
-
-export type Circuits<PS> = {
-  issueCertificate(context: __compactRuntime.CircuitContext<PS>,
-                   expectedSkillId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  verifyCertificate(context: __compactRuntime.CircuitContext<PS>,
-                    claimedCommitment_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
-  revokeCertificate(context: __compactRuntime.CircuitContext<PS>,
-                    commitmentToRevoke_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  setIssuerCommitment(context: __compactRuntime.CircuitContext<PS>,
-                      newThreshold_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  resetCertification(context: __compactRuntime.CircuitContext<PS>,
-                     newSkillId_0: Uint8Array,
-                     newThreshold_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  incrementSession(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
-}
-
-export type Ledger = {
-  readonly certificateCount: bigint;
-  readonly revokedCount: bigint;
-  readonly activeSession: bigint;
-  readonly skillId: Uint8Array;
-  readonly issuerCommitment: Uint8Array;
-  readonly lastCertificationCommitment: Uint8Array;
-  readonly lastRevokedCommitment: Uint8Array;
-  readonly certificationThreshold: bigint;
-}
-
-export type ContractReferenceLocations = any;
-
-export declare const contractReferenceLocations : ContractReferenceLocations;
-
-export declare class Contract<PS = any, W extends Witnesses<PS> = Witnesses<PS>> {
-  witnesses: W;
-  circuits: Circuits<PS>;
-  impureCircuits: ImpureCircuits<PS>;
-  provableCircuits: ProvableCircuits<PS>;
-  constructor(witnesses: W);
-  initialState(context: __compactRuntime.ConstructorContext<PS>,
-               initialSkillId_0: Uint8Array): __compactRuntime.ConstructorResult<PS>;
-}
-
-export declare function ledger(state: __compactRuntime.StateValue | __compactRuntime.ChargedState): Ledger;
-export declare const pureCircuits: PureCircuits;
+export declare function ledger(state: any): LedgerState;
+export declare const pureCircuits: Record<string, any>;
+export declare const contractReferenceLocations: Record<string, any>;
