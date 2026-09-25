@@ -1,16 +1,38 @@
-﻿"use client";
+"use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { getClient, CONTRACT_ADDRESS, NETWORK_CONFIG } from "../lib/contract";
 import styles from "./page.module.css";
 
+// Dynamic import for Three.js 3D wave component to prevent SSR hydration mismatch
+const OrganicWave3D = dynamic(() => import("../components/OrganicWave3D"), {
+  ssr: false,
+});
+
 export default function HomeClient() {
-  const [stats, setStats] = useState({ certificateCount: 0, skillId: "skill_fullstack_zk_engineer", lastCertificationCommitment: "0x...", activeSession: 1 });
+  const [stats, setStats] = useState({
+    certificateCount: 0,
+    revokedCount: 0,
+    activeSession: 1,
+    skillId: "skill_fullstack_zk_engineer",
+    lastCertificationCommitment: "0x...",
+    certificationThreshold: 70,
+  });
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    getClient().fetchPublicState().then(s => { setStats(s); setLoading(false); }).catch(() => setLoading(false));
+    getClient()
+      .fetchPublicState()
+      .then((s) => {
+        setStats(s);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, []);
 
   const copyAddress = () => {
@@ -21,185 +43,178 @@ export default function HomeClient() {
 
   const features = [
     {
-      icon: "🛡️",
+      num: "01 / PRIVACY",
       title: "Zero-Knowledge Skill Proofs",
-      desc: "Prove assessment score meets or exceeds certification threshold (e.g. >= 70%) without ever revealing your actual score to employers.",
-      badge: "Privacy-Preserving",
-      color: "#8b5cf6",
+      desc: "Prove assessment score meets or exceeds certification threshold (e.g. >= 70%) without ever revealing your actual score or exam transcript to employers.",
     },
     {
-      icon: "👤",
-      title: "Anti-Bias Anonymous Screening",
-      desc: "Candidate identity, demographic data, and test records remain client-side. Only a tamper-proof cryptographic commitment enters the blockchain.",
-      badge: "Anti-Bias",
-      color: "#06b6d4",
+      num: "02 / ANTI-BIAS",
+      title: "Anonymous Assessment Screening",
+      desc: "Candidate identity, demographic data, and test records remain client-side. Only a tamper-proof cryptographic commitment is anchored on-chain.",
     },
     {
-      icon: "⚡",
-      title: "Midnight Compact Smart Contract",
-      desc: "Built with Compact v0.23 with 6 specialized circuits running on Midnight Preview Testnet with native Midnight.js SDK integration.",
-      badge: "On-Chain ZK",
-      color: "#10b981",
+      num: "03 / SMART CONTRACT",
+      title: "Midnight Compact v0.23",
+      desc: "Architected with 6 specialized zero-knowledge circuits executing on Midnight Preview Testnet with native Midnight.js SDK integration.",
     },
     {
-      icon: "🔍",
+      num: "04 / VERIFIABILITY",
       title: "Publicly Verifiable Credentials",
-      desc: "Employers and institutions can publicly verify claimed certification commitments against the Midnight ledger in milliseconds.",
-      badge: "Verifiable",
-      color: "#f59e0b",
+      desc: "Employers and institutions can publicly verify claimed certification commitments against the live Midnight ledger in milliseconds.",
     },
   ];
 
   return (
     <div className={styles.wrapper}>
-      {/* Hero Section */}
+      {/* 3D Wave Hero Section */}
       <section className={styles.hero}>
-        <div className={styles.heroBadge}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px #10b981", display: "inline-block" }} />
-          <span>Midnight Network • Preview Testnet</span>
-        </div>
-        <h1 className={styles.heroTitle}>
-          Private Skill<br />
-          <span className={styles.heroGradient}>Certification Protocol</span>
-        </h1>
-        <p className={styles.heroDesc}>
-          Issue and verify verified developer and professional skill credentials using <strong>zero-knowledge proofs</strong> on the Midnight Network. Your assessment score and identity stay private — only a cryptographic commitment is anchored on-chain.
-        </p>
-        <div className={styles.heroCTA}>
-          <Link href="/submit" className="btn-primary" style={{ fontSize: "0.95rem", padding: "0.75rem 2rem", borderRadius: "50px" }}>
-            🎓 Issue Certificate →
-          </Link>
-          <Link href="/explorer" className="btn-secondary" style={{ fontSize: "0.95rem", padding: "0.75rem 2rem", borderRadius: "50px" }}>
-            🔍 View On-Chain State
-          </Link>
-          <a href={NETWORK_CONFIG.explorerUrl} target="_blank" rel="noreferrer" className="btn-secondary" style={{ fontSize: "0.95rem", padding: "0.75rem 1.75rem", borderRadius: "50px", color: "#a78bfa", borderColor: "rgba(139,92,246,0.3)" }}>
-            🚀 Midnight Explorer ↗
-          </a>
-        </div>
-      </section>
+        <OrganicWave3D />
 
-      {/* Stats Cards */}
-      <section className={styles.statsGrid}>
-        <div className="glass-card stat-card fade-in" style={{ padding: "1.5rem" }}>
-          <div className="stat-label" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", marginBottom: "0.5rem" }}>Total Certificates Issued</div>
-          <div className="stat-value" style={{ fontSize: "2rem", fontWeight: 800, color: "#f1f5f9" }}>{loading ? "..." : stats.certificateCount}</div>
-          <div style={{ fontSize: "0.75rem", color: "#10b981", marginTop: "0.25rem" }}>✓ Confirmed on-chain</div>
-        </div>
-        <div className="glass-card stat-card fade-in" style={{ padding: "1.5rem" }}>
-          <div className="stat-label" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", marginBottom: "0.5rem" }}>Active Session Epoch</div>
-          <div className="stat-value" style={{ fontSize: "2rem", fontWeight: 800, color: "#06b6d4" }}>{loading ? "..." : stats.activeSession}</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Epoch replay protection</div>
-        </div>
-        <div className="glass-card stat-card fade-in" style={{ padding: "1.5rem" }}>
-          <div className="stat-label" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", marginBottom: "0.5rem" }}>Active Skill Offering</div>
-          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#a78bfa", marginTop: "0.35rem", wordBreak: "break-all", fontFamily: "monospace" }}>
-            {loading ? "..." : stats.skillId}
+        <div className={styles.heroContent}>
+          {/* Top Pill Badge */}
+          <div className={styles.heroBadge}>
+            <span className={styles.heroBadgeDot} />
+            <span>Midnight Network • Preview Testnet</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Active credential domain</div>
-        </div>
-        <div className="glass-card stat-card fade-in" style={{ padding: "1.5rem" }}>
-          <div className="stat-label" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", marginBottom: "0.5rem" }}>Network & Framework</div>
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#38bdf8", marginTop: "0.35rem" }}>Midnight Preview</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Compact v0.23 • Next.js 14</div>
-        </div>
-      </section>
 
-      {/* Contract Verification Card */}
-      <section className={styles.infoSection}>
-        <div className="glass-card" style={{ padding: "1.75rem", border: "1px solid rgba(139,92,246,0.25)", background: "rgba(139,92,246,0.04)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ fontSize: "1.2rem" }}>📜</span>
-              <h2 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#f1f5f9" }}>Deployed Midnight Smart Contract</h2>
-            </div>
-            <span style={{ fontSize: "0.72rem", padding: "0.25rem 0.75rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#34d399", fontWeight: 700, border: "1px solid rgba(16,185,129,0.3)" }}>
-              LIVE ON PREVIEW
-            </span>
+          {/* Clean Pure White Main Title */}
+          <h1 className={styles.heroTitle}>
+            Elevate Your
+            <span className={styles.heroTitleHighlight}>Proof of Competency</span>
+          </h1>
+
+          {/* Clean Subtitle */}
+          <p className={styles.heroDesc}>
+            Verify developer qualifications and professional assessments in complete privacy using zero-knowledge proofs on the Midnight Network — zero test score exposure, zero identity leaks.
+          </p>
+
+          {/* Hero Action Buttons */}
+          <div className={styles.heroActions}>
+            <Link href="/submit" className="btn-pill-primary">
+              Issue Certificate
+            </Link>
+            <Link href="/submit#verify-section" className="btn-pill-ghost">
+              Verify Credential
+            </Link>
           </div>
-          <div className={styles.infoGrid}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Contract Address</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", background: "rgba(0,0,0,0.3)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "0.82rem", color: "#c4b5fd", wordBreak: "break-all", flex: 1 }}>{CONTRACT_ADDRESS}</span>
-                <button onClick={copyAddress} style={{ padding: "0.35rem 0.85rem", fontSize: "0.75rem", borderRadius: "6px", background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#a78bfa", cursor: "pointer", fontWeight: 600 }}>
-                  {copied ? "✓ Copied!" : "Copy"}
-                </button>
-                <a href={NETWORK_CONFIG.explorerUrl} target="_blank" rel="noreferrer" style={{ padding: "0.35rem 0.85rem", fontSize: "0.75rem", borderRadius: "6px", background: "linear-gradient(135deg,#8b5cf6,#3b82f6)", color: "#fff", textDecoration: "none", fontWeight: 600 }}>
-                  View on Explorer ↗
-                </a>
-              </div>
+        </div>
+
+        {/* Floating 3D Frosted Glass Cards (Matching Reference Layout) */}
+        <div className={styles.floatingCardsContainer}>
+          {/* Left Floating Card */}
+          <div className={styles.floatingCardLeft}>
+            <div className={cardHeaderRow()}>
+              <span className={styles.cardCategory}>Zero-Knowledge Proofs</span>
+              <span className={styles.cardArrowIcon}>↗</span>
             </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Indexer GraphQL</div>
-              <span style={{ color: "#94a3b8", fontSize: "0.78rem", fontFamily: "monospace" }}>{NETWORK_CONFIG.indexerUrl}</span>
+            <div className={styles.cardMainTitle}>100% Score Privacy</div>
+            <div className={styles.cardSubRow}>
+              <span className={styles.cardSubText}>Identity & Record Shielded</span>
+              <span className={styles.cardPercentBadge}>ZK-SNARK</span>
             </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Node RPC</div>
-              <span style={{ color: "#94a3b8", fontSize: "0.78rem", fontFamily: "monospace" }}>{NETWORK_CONFIG.nodeUrl}</span>
+          </div>
+
+          {/* Right Floating Card */}
+          <div className={styles.floatingCardRight}>
+            <div className={cardHeaderRow()}>
+              <span className={styles.cardCategory}>Passing Qualification</span>
+              <span className={styles.cardArrowIcon}>↗</span>
             </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Preview Faucet</div>
-              <a href={NETWORK_CONFIG.faucetUrl} target="_blank" rel="noreferrer" style={{ color: "#06b6d4", fontSize: "0.78rem" }}>
-                Get Free Test tDUST ↗
-              </a>
+            <div className={styles.cardBigStat}>96%</div>
+            <span className={styles.cardSubText}>Assessment Precision Rate</span>
+            <div className={styles.progressBarTrack}>
+              <div className={styles.progressBarFill} style={{ width: "96%" }} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Feature Showcase */}
-      <section style={{ marginBottom: "3rem" }}>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <h2 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#f1f5f9", letterSpacing: "-0.02em" }}>
-            Why Private Skill Certification?
-          </h2>
-          <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "0.5rem" }}>
-            Verifiable competency assessments without compromising sensitive personal or candidate data.
+      {/* Live Ledger State & Features Section */}
+      <section className={styles.ledgerSection}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTag}>Decentralized State</span>
+          <h2 className={styles.sectionTitle}>Midnight Preview Ledger</h2>
+          <p className={styles.sectionDesc}>
+            Direct zero-knowledge state anchors queried from the official Midnight Preview GraphQL indexer.
           </p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.25rem" }}>
-          {features.map(f => (
-            <div key={f.title} className="glass-card" style={{ padding: "1.75rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "1.75rem" }}>{f.icon}</span>
-                <span style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem", borderRadius: "99px", background: `${f.color}15`, color: f.color, border: `1px solid ${f.color}30`, fontWeight: 700 }}>
-                  {f.badge}
-                </span>
-              </div>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#f1f5f9" }}>{f.title}</h3>
-              <p style={{ fontSize: "0.83rem", color: "#94a3b8", lineHeight: 1.6 }}>{f.desc}</p>
+
+        {/* Live Metrics Grid */}
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Certificates Issued</div>
+            <div className={styles.statValue}>
+              {loading ? "..." : stats.certificateCount}
+            </div>
+            <div className={styles.statFootnote}>On-Chain ZK Commitments</div>
+          </div>
+
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Passing Threshold</div>
+            <div className={styles.statValue}>
+              {loading ? "..." : `${stats.certificationThreshold}%`}
+            </div>
+            <div className={styles.statFootnote}>Enforced in Zero-Knowledge</div>
+          </div>
+
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Active Session Epoch</div>
+            <div className={styles.statValue}>
+              {loading ? "..." : `#${stats.activeSession}`}
+            </div>
+            <div className={styles.statFootnote}>Replay Protection Nonce</div>
+          </div>
+
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Active Track</div>
+            <div className={styles.statValue} style={{ fontSize: "1.1rem", paddingTop: "0.5rem" }}>
+              Full-Stack ZK
+            </div>
+            <div className={styles.statFootnote}>{stats.skillId}</div>
+          </div>
+        </div>
+
+        {/* Canonical Smart Contract Card */}
+        <div className={styles.contractBar}>
+          <div className={styles.contractInfo}>
+            <span className={styles.contractLabel}>Canonical Midnight Preview Contract</span>
+            <span className={styles.contractAddress}>{CONTRACT_ADDRESS}</span>
+          </div>
+          <div className={styles.contractActions}>
+            <button
+              onClick={copyAddress}
+              className="btn-pill-ghost"
+              style={{ padding: "0.5rem 1.2rem", fontSize: "0.82rem" }}
+            >
+              {copied ? "Copied ✓" : "Copy Address"}
+            </button>
+            <a
+              href={NETWORK_CONFIG.explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-pill-primary"
+              style={{ padding: "0.5rem 1.2rem", fontSize: "0.82rem" }}
+            >
+              Midnight Explorer ↗
+            </a>
+          </div>
+        </div>
+
+        {/* Feature Grid */}
+        <div className={styles.featuresGrid}>
+          {features.map((f) => (
+            <div key={f.num} className={styles.featureCard}>
+              <span className={styles.featureNumber}>{f.num}</span>
+              <h3 className={styles.featureTitle}>{f.title}</h3>
+              <p className={styles.featureDesc}>{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
-
-      {/* Navigation Quick Cards */}
-      <section className={styles.navCards}>
-        <Link href="/submit" className={`glass-card ${styles.navCard}`}>
-          <div className={styles.navCardIcon}>✍️</div>
-          <div className={styles.navCardTitle}>Issue Certificate</div>
-          <div className={styles.navCardDesc}>Submit a private zero-knowledge skill proof with local witness injection to claim on-chain credentials.</div>
-          <div className={styles.navCardArrow}>→</div>
-        </Link>
-        <Link href="/admin" className={`glass-card ${styles.navCard}`}>
-          <div className={styles.navCardIcon}>🛡️</div>
-          <div className={styles.navCardTitle}>Issuer Console</div>
-          <div className={styles.navCardDesc}>Issuer governance: set passing score thresholds, revoke credentials, and rotate skill programs.</div>
-          <div className={styles.navCardArrow}>→</div>
-        </Link>
-        <Link href="/explorer" className={`glass-card ${styles.navCard}`}>
-          <div className={styles.navCardIcon}>🔍</div>
-          <div className={styles.navCardTitle}>Chain Explorer</div>
-          <div className={styles.navCardDesc}>Inspect live on-chain public state, total issued credentials, and recent ZK commitment hashes.</div>
-          <div className={styles.navCardArrow}>→</div>
-        </Link>
-        <Link href="/inspector" className={`glass-card ${styles.navCard}`}>
-          <div className={styles.navCardIcon}>⚙️</div>
-          <div className={styles.navCardTitle}>ZK Inspector</div>
-          <div className={styles.navCardDesc}>Deep-dive into the Compact v0.23 circuits, witness schemas, and public ledger field definitions.</div>
-          <div className={styles.navCardArrow}>→</div>
-        </Link>
-      </section>
     </div>
   );
+}
+
+function cardHeaderRow() {
+  return styles.cardHeaderRow;
 }

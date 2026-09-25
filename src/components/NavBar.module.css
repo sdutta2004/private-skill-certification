@@ -2,59 +2,254 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10,10,15,0.85);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(20px);
+  background: rgba(7, 7, 10, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
+
 .inner {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1.5rem;
-  height: 64px;
+  padding: 0 2rem;
+  height: 68px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 2rem;
 }
-.logo { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-.logoIcon { font-size: 1.4rem; }
-.logoText { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em; }
-.logoSub { font-weight: 400; color: #8b5cf6; font-size: 0.85em; }
-.nav { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+
+/* Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.brandDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #7c5ce9;
+  box-shadow: 0 0 12px #7c5ce9;
+}
+
+.brandTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+/* Navigation Links */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
 .navLink {
-  padding: 0.4rem 0.875rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #8e95a5;
+  transition: color 0.2s ease;
+  text-decoration: none;
+  position: relative;
+  padding: 0.25rem 0;
+}
+
+.navLink:hover {
+  color: #ffffff;
+}
+
+.activeLink {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.activeLink::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 9999px;
+}
+
+/* Actions Right */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.networkBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+}
+
+.networkDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse 2.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.9); }
+}
+
+.networkText {
+  font-size: 0.76rem;
   font-weight: 500;
   color: #94a3b8;
-  transition: color 0.2s, background 0.2s;
+  font-family: var(--font-display);
 }
-.navLink:hover { color: #f1f5f9; background: rgba(255,255,255,0.05); }
-.active { color: #a78bfa !important; background: rgba(139,92,246,0.1) !important; }
-.actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
-.netPill {
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid rgba(139,92,246,0.3);
-  border-radius: 20px;
-  font-size: 0.75rem; font-weight: 600; color: #a78bfa;
-  background: rgba(139,92,246,0.1);
+
+.walletBtnConnect {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.35rem;
+  background: #ffffff;
+  color: #07070a;
+  border: 1px solid #ffffff;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 14px rgba(255, 255, 255, 0.12);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  white-space: nowrap;
 }
-.netDot {
-  width: 7px; height: 7px; border-radius: 50%;
+
+.walletBtnConnect:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 22px rgba(255, 255, 255, 0.24);
+}
+
+.walletBtnConnect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.walletBtnConnected {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.walletBtnConnected:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.walletDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 6px #10b981;
-  animation: pulse 2s infinite;
 }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-.hamburger { display: none; flex-direction: column; gap: 4px; background: none; border: none; cursor: pointer; padding: 4px; }
-.hamburger span { display: block; width: 22px; height: 2px; background: #94a3b8; border-radius: 2px; transition: 0.3s; }
-@media (max-width: 768px) {
-  .nav {
-    display: none; position: fixed; inset: 64px 0 0 0;
-    background: rgba(10,10,15,0.97); backdrop-filter: blur(20px);
-    flex-direction: column; align-items: center; justify-content: center; gap: 1rem; z-index: 99;
+
+.walletLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #34d399;
+  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+}
+
+.walletAddress {
+  color: #e2e8f0;
+}
+
+/* Mobile Hamburger */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 26px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hamburger span {
+  width: 100%;
+  height: 2px;
+  background: #cbd5e1;
+  border-radius: 2px;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.barTopOpen {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.barMidOpen {
+  opacity: 0;
+}
+
+.barBotOpen {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+@media (max-width: 868px) {
+  .inner {
+    padding: 0 1.25rem;
   }
-  .navOpen { display: flex; }
-  .hamburger { display: flex; }
-  .netPill { display: none; }
+  .nav {
+    display: none;
+    position: fixed;
+    top: 68px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(7, 7, 10, 0.98);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    z-index: 99;
+  }
+  .navOpen {
+    display: flex;
+  }
+  .hamburger {
+    display: flex;
+  }
+  .networkBadge {
+    display: none;
+  }
 }

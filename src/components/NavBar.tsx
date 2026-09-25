@@ -1,15 +1,16 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import styles from "./NavBar.module.css";
 
 const links = [
-  { href: "/", label: "Dashboard" },
-  { href: "/submit", label: "Issue Certificate" },
+  { href: "/", label: "Overview" },
+  { href: "/submit", label: "Issue Credential" },
+  { href: "/submit#verify-section", label: "Verify Credential" },
   { href: "/admin", label: "Issuer Console" },
-  { href: "/explorer", label: "Chain Explorer" },
-  { href: "/inspector", label: "ZK Inspector" },
+  { href: "/explorer", label: "Explorer" },
 ];
 
 export default function NavBar({
@@ -18,7 +19,7 @@ export default function NavBar({
   isApproved = false,
   onOpenConnect,
   onOpenDetails,
-  connecting
+  connecting,
 }: {
   walletAddress: string | null;
   walletName?: string;
@@ -29,80 +30,81 @@ export default function NavBar({
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+
   const safeAddr = typeof walletAddress === "string" ? walletAddress : (walletAddress ? String(walletAddress) : null);
   const shortAddr = safeAddr && safeAddr.length > 16
-    ? `${safeAddr.substring(0, 10)}...${safeAddr.slice(-6)}`
+    ? `${safeAddr.substring(0, 8)}...${safeAddr.slice(-5)}`
     : (safeAddr || null);
 
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link href="/" className={styles.logo}>
-          <span className={styles.logoIcon}>🎓</span>
-          <span className={styles.logoText}>ZKCert<span className={styles.logoSub}>.psc</span></span>
+        {/* Brand Logo */}
+        <Link href="/" className={styles.brand}>
+          <div className={styles.brandDot} />
+          <span className={styles.brandTitle}>PSC Protocol</span>
         </Link>
 
+        {/* Center Nav Links */}
         <nav className={`${styles.nav} ${menuOpen ? styles.navOpen : ""}`}>
-          {links.map(l => (
-            <Link key={l.href} href={l.href} className={`${styles.navLink} ${pathname === l.href ? styles.active : ""}`} onClick={() => setMenuOpen(false)}>
-              {l.label}
-            </Link>
-          ))}
+          {links.map((l) => {
+            const isActive = pathname === l.href;
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`${styles.navLink} ${isActive ? styles.activeLink : ""}`}
+                onClick={() => setMenuOpen(false)}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
 
+        {/* Right Actions */}
         <div className={styles.actions}>
-          <div className={styles.netPill}>
-            <span className={styles.netDot} />
-            <span>Midnight Preview</span>
+          <div className={styles.networkBadge} title="Connected to Midnight Preview Testnet">
+            <span className={styles.networkDot} />
+            <span className={styles.networkText}>Preview</span>
           </div>
 
           {walletAddress ? (
             <button
-              className="btn-secondary"
+              className={styles.walletBtnConnected}
               onClick={onOpenDetails}
               title={walletAddress}
-              style={{
-                fontFamily: "monospace",
-                fontSize: "0.8rem",
-                padding: "0.4rem 0.9rem",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                border: "1px solid rgba(16,185,129,0.4)",
-                background: "rgba(16,185,129,0.08)",
-                color: "#f1f5f9"
-              }}
             >
-              <span style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "#10b981",
-                boxShadow: "0 0 6px #10b981",
-                display: "inline-block"
-              }} />
-              <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.75rem" }}>
-                {walletName?.includes("1AM") ? "1AM" : "MIDNIGHT"}
-              </span>
-              <span>{shortAddr}</span>
+              <span className={styles.walletDot} />
+              <span className={styles.walletLabel}>{walletName?.includes("1AM") ? "1AM" : "MIDNIGHT"}</span>
+              <span className={styles.walletAddress}>{shortAddr}</span>
             </button>
           ) : (
             <button
-              className="btn-primary"
+              className={styles.walletBtnConnect}
               onClick={onOpenConnect}
               disabled={connecting}
-              style={{ padding: "0.45rem 1.1rem", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
             >
               {connecting ? (
-                <><span className="spinner" /> Connecting...</>
+                <>
+                  <span className="spinner" />
+                  <span>Connecting...</span>
+                </>
               ) : (
-                <>🛡️ Connect 1AM Wallet</>
+                <span>Connect Wallet</span>
               )}
             </button>
           )}
 
-          <button className={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
-            <span /><span /><span />
+          {/* Mobile Hamburger */}
+          <button
+            className={styles.hamburger}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+          >
+            <span className={menuOpen ? styles.barTopOpen : ""} />
+            <span className={menuOpen ? styles.barMidOpen : ""} />
+            <span className={menuOpen ? styles.barBotOpen : ""} />
           </button>
         </div>
       </div>
