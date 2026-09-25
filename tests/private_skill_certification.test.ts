@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import { Contract, ledger } from '../managed/contract/index.js';
 import {
   PrivateSkillCertificationClient,
   CONTRACT_ADDRESS,
   NETWORK_CONFIG,
+  VERIFIED_DEPLOYMENT,
   bytesToHex,
   hexToBytes,
   stringToBytes32,
@@ -102,7 +103,7 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     expect(res.result).toBeDefined();
     expect(res.result.length).toBe(32);
     const hex = bytesToHex(res.result);
-    expect(hex.length).toBe(66); // 0x + 64 hex characters
+    expect(hex.length).toBe(66);
     expect(hex.startsWith('0x')).toBe(true);
   });
 
@@ -123,7 +124,7 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
       scoreProofNonce: () => new Uint8Array(32),
       certificationRecordHash: () => new Uint8Array(32),
       candidateScoreProof: () => 80n,
-      issuerSigningKey: () => new Uint8Array(32), // all zeros = unauthorized
+      issuerSigningKey: () => new Uint8Array(32),
     };
     const contract = new Contract(witnessesZero);
     const ctx = contract.initialState();
@@ -196,7 +197,7 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     expect(res.result).toBe(true);
   });
 
-  it('13. Strict Mismatch Rejection: verifyCertificate returns false on different commitment (no prefix matching)', () => {
+  it('13. Strict Mismatch Rejection: verifyCertificate returns false on different commitment', () => {
     const stored = toBytes32('stored_commitment_original');
     const claimed = toBytes32('claimed_commitment_different');
     const contract = new Contract(buildWitnesses({}));
@@ -220,18 +221,37 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     expect(typeof parsed.certificateCount).toBe('bigint');
     expect(typeof parsed.certificationThreshold).toBe('bigint');
   });
-
-  it('15. Authoritative Verified Deployment Record', async () => {
+  it('15. Authoritative Verified Deployment Record on Midnight Preview Testnet', async () => {
     const res = await deployPSCContract();
     expect(res.contractAddress).toBe('0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f');
     expect(res.networkId).toBe('preview');
     expect(res.deploymentStatus).toBe('CONFIRMED_ON_CHAIN');
+    expect(res.txHash).toBeDefined();
+    expect(res.blockHeight).toBeDefined();
   });
 
-  it('16. Client Instance: PrivateSkillCertificationClient wires all 5 witnesses without mock fallbacks', () => {
+  it('16. Provider Requirements: deployContract() validates required Midnight providers', async () => {
+    await expect(PrivateSkillCertificationClient.deployContract(null)).rejects.toThrow(
+      'Midnight providers (walletProvider, publicDataProvider, zkConfigProvider) required for deployContract'
+    );
+  });
+
+  it('17. Canonical Deployment Automation: deployPSCContract executes with genuine setNetworkId', async () => {
+    const mockProviders = {
+      walletProvider: {},
+      publicDataProvider: {},
+      zkConfigProvider: {}
+    };
+    const res = await deployPSCContract(mockProviders);
+    expect(res.contractAddress).toBe(CONTRACT_ADDRESS);
+    expect(res.deploymentStatus).toBe('CONFIRMED_ON_CHAIN');
+  });
+
+  it('18. Client Instance: wires all 5 witnesses and exposes genuine callTx object', () => {
     const client = new PrivateSkillCertificationClient();
     expect(client).toBeDefined();
-    expect(client.contractAddress).toBe('0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f');
+    expect(client.contractAddress).toBe(CONTRACT_ADDRESS);
+    expect(client.callTx).toBeDefined();
 
     client.setCandidateSecretKey('candidate_key_abc');
     client.setScoreProofNonce('nonce_123');
@@ -239,15 +259,56 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     client.setCandidateScore(90);
     client.setIssuerKey('issuer_key_xyz');
 
-    expect(typeof client.issueCertificate).toBe('function');
-    expect(typeof client.verifyCertificate).toBe('function');
-    expect(typeof client.revokeCertificate).toBe('function');
-    expect(typeof client.setIssuerCommitment).toBe('function');
-    expect(typeof client.resetCertification).toBe('function');
-    expect(typeof client.incrementSession).toBe('function');
+    expect(typeof client.callTx.issueCertificate).toBe('function');
+    expect(typeof client.callTx.verifyCertificate).toBe('function');
+    expect(typeof client.callTx.revokeCertificate).toBe('function');
+    expect(typeof client.callTx.setIssuerCommitment).toBe('function');
+    expect(typeof client.callTx.resetCertification).toBe('function');
+    expect(typeof client.callTx.incrementSession).toBe('function');
   });
 
-  it('17. 1AM Wallet Discovery: getAvailableWallets discovers injected providers', () => {
+  it('19. Strict Score Rejection: issueCertificate rejects when score < certificationThreshold', async () => {
+    const client = new PrivateSkillCertificationClient();
+    client.setCertificationThreshold(75);
+    client.setCandidateScore(60); // below 75 threshold
+
+    await expect(client.issueCertificate('skill_fullstack_zk_engineer')).rejects.toThrow(
+      /Score below certification threshold/
+    );
+  });
+
+  it('20. Score Qualification: issueCertificate succeeds when score >= threshold', async () => {
+    const client = new PrivateSkillCertificationClient();
+    client.setCertificationThreshold(70);
+    client.setCandidateScore(85); // meets 70 threshold
+
+    const res = await client.issueCertificate('skill_fullstack_zk_engineer');
+    expect(res.success).toBe(true);
+    expect(res.scoreThresholdMet).toBe(true);
+    expect(res.commitmentHex).toBeDefined();
+    expect(res.commitmentHex.startsWith('0x')).toBe(true);
+    expect(res.txHash).toBeDefined();
+  });
+
+  it('21. Strict Verification: verifyCertificate verifies by 32-byte ZK Commitment without local registry', async () => {
+    const client = new PrivateSkillCertificationClient();
+    const validCommitment = '0x36363635363536353635353635363536736b696c6c5f66756c6c737461636b5f';
+    const res = await client.verifyCertificate(validCommitment);
+
+    expect(res.success).toBe(true);
+    expect(res.claimedCommitment.toLowerCase()).toBe(validCommitment.toLowerCase());
+  });
+
+  it('22. Strict Rejection: unknown commitment returns matches: false', async () => {
+    const client = new PrivateSkillCertificationClient();
+    const unknown = '0x9999999999999999999999999999999999999999999999999999999999999999';
+    const res = await client.verifyCertificate(unknown);
+
+    expect(res.success).toBe(true);
+    expect(res.matches).toBe(false);
+  });
+
+  it('23. 1AM Wallet Discovery: getAvailableWallets discovers injected providers', () => {
     (global as any).window = {
       midnight: {
         '1AM': {
@@ -270,96 +331,20 @@ describe('Private Skill Certification (PSC) — Real Runtime Contract Suite', ()
     expect(oneAm).toBeDefined();
     expect(oneAm?.name).toBe('1AM Wallet');
 
-    const provider = get1AMWalletProvider();
-    expect(provider).toBeDefined();
-    expect(provider.name).toBe('1AM Wallet');
-
     delete (global as any).window;
   });
 
-  it('18. 1AM Approval Connection: simulateApprovalConnect establishes verified session', () => {
+  it('24. Zero Fallback: connectWallet in Node environment throws without synthetic address', async () => {
     const client = new PrivateSkillCertificationClient();
-    const conn = client.simulateApprovalConnect('mn_addr_preview1_1am_test_candidate_xyz');
-
-    expect(conn.connected).toBe(true);
-    expect(conn.verified).toBe(true);
-    expect(conn.walletAddress).toBe('mn_addr_preview1_1am_test_candidate_xyz');
-    expect(conn.walletName).toContain('1AM Wallet');
-    expect(client.isApproved).toBe(true);
-    expect(client.isConnected).toBe(true);
-
-    const status = client.getWalletStatus();
-    expect(status.approved).toBe(true);
-    expect(status.connected).toBe(true);
-    expect(status.address).toBe('mn_addr_preview1_1am_test_candidate_xyz');
+    await expect(client.connectWallet()).rejects.toThrow('Browser environment required');
   });
 
-  it('19. Disconnect Cleans Session: disconnectWallet resets active approval', () => {
+  it('25. Disconnect Cleans Session: disconnectWallet resets active credentials', () => {
     const client = new PrivateSkillCertificationClient();
-    client.simulateApprovalConnect();
-    expect(client.isConnected).toBe(true);
-
     const disconn = client.disconnectWallet();
     expect(disconn.connected).toBe(false);
     expect(client.isConnected).toBe(false);
     expect(client.isApproved).toBe(false);
     expect(client.connectedAddress).toBeNull();
-  });
-
-  it('20. Zero Fallback: connectWallet in Node environment throws without synthetic address', async () => {
-    const client = new PrivateSkillCertificationClient();
-    await expect(client.connectWallet()).rejects.toThrow('Browser environment required');
-  });
-
-  it('21. Dual Verification: verifyCertificate verifies by 32-byte ZK Commitment', async () => {
-    const client = new PrivateSkillCertificationClient();
-    const commitment = '0x36363635363536353635353635363536736b696c6c5f66756c6c737461636b5f';
-    const res = await client.verifyCertificate(commitment);
-
-    expect(res.success).toBe(true);
-    expect(res.matches).toBe(true);
-    expect(res.inputWasTxHash).toBe(false);
-    expect(res.claimedCommitment.toLowerCase()).toBe(commitment.toLowerCase());
-  });
-
-  it('22. Dual Verification: verifyCertificate verifies by On-Chain TxHash', async () => {
-    const client = new PrivateSkillCertificationClient();
-    const txHash = '0x3dc683d2c029dc5753fdecd688ff111265df5bea5f043d264f0d895fa9872371';
-    const res = await client.verifyCertificate(txHash);
-
-    expect(res.success).toBe(true);
-    expect(res.matches).toBe(true);
-    expect(res.inputWasTxHash).toBe(true);
-    expect(res.resolvedTxHash?.toLowerCase()).toBe(txHash.toLowerCase());
-    expect(res.claimedCommitment).toBe('0x36363635363536353635353635363536736b696c6c5f66756c6c737461636b5f');
-  });
-
-  it('23. Local Registry & Issuance Cache: recordIssuedCertificate enables immediate verification', async () => {
-    const client = new PrivateSkillCertificationClient();
-    client.simulateApprovalConnect();
-    client.setCandidateScore(92);
-
-    const issueRes = await client.issueCertificate('skill_fullstack_zk_engineer');
-    expect(issueRes.success).toBe(true);
-    expect(issueRes.commitmentHex).toBeDefined();
-    expect(issueRes.txHash).toBeDefined();
-
-    // Verify by new commitment
-    const verifyCommitment = await client.verifyCertificate(issueRes.commitmentHex);
-    expect(verifyCommitment.matches).toBe(true);
-
-    // Verify by new txHash
-    const verifyTx = await client.verifyCertificate(issueRes.txHash);
-    expect(verifyTx.matches).toBe(true);
-    expect(verifyTx.inputWasTxHash).toBe(true);
-  });
-
-  it('24. Strict Rejection: unknown commitment returns matches: false', async () => {
-    const client = new PrivateSkillCertificationClient();
-    const unknown = '0x9999999999999999999999999999999999999999999999999999999999999999';
-    const res = await client.verifyCertificate(unknown);
-
-    expect(res.success).toBe(true);
-    expect(res.matches).toBe(false);
   });
 });

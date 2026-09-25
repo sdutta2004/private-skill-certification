@@ -17,7 +17,8 @@ export interface Witnesses {
   issuerSigningKey: (ctx: any) => [any, Uint8Array] | Uint8Array;
 }
 
-export declare class Contract {
+export declare class Contract<T = any> {
+  witnesses: Witnesses;
   constructor(witnesses: Witnesses);
   circuits: {
     issueCertificate: (ctx: any, expectedSkillId: Uint8Array) => { result: Uint8Array; context: any };
@@ -35,3 +36,5 @@ export declare class Contract {
 export declare function ledger(state: any): LedgerState;
 export declare const pureCircuits: Record<string, any>;
 export declare const contractReferenceLocations: Record<string, any>;
+
+export type Ledger = LedgerState;

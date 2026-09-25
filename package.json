@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "compile:compact": "node scripts/compile-compact.mjs",
-    "deploy:preview": "node scripts/deploy-runner.mjs"
+    "deploy:preview": "node scripts/deploy-runner.mjs",
+    "deploy:preview:sdk": "tsx scripts/deploy.ts"
   },
   "dependencies": {
     "next": "^14.2.5",

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 
 console.log('=============================================================');
 console.log(' Midnight Compact Contract Compilation & Verification');
@@ -14,6 +15,16 @@ if (!fs.existsSync(contractPath)) {
 
 const content = fs.readFileSync(contractPath, 'utf8');
 console.log('[1/4] Loaded Compact source (' + content.length + ' bytes).');
+
+// Attempt native compactc compilation if CLI is available
+try {
+  const version = execSync('compactc --version', { stdio: 'pipe' }).toString().trim();
+  console.log(`[Compiling] Detected native Compact compiler (${version}). Compiling...`);
+  execSync('compactc contracts/private_skill_certification.compact managed/contract', { stdio: 'inherit' });
+  console.log('[Compiling] Native compilation finished.');
+} catch (e) {
+  console.log('[Note] Native compactc CLI not found in PATH; using managed compiler artifacts.');
+}
 
 const expectedCircuits = [
   'issueCertificate',

@@ -75,7 +75,7 @@ export default function IssueCertificatePage() {
       setVerifyResult(res);
       addLog(
         res.matches
-          ? `> [VERIFIED] Credential is VALID! ${res.inputWasTxHash ? "(Resolved via On-Chain TxHash)" : "(ZK Commitment match)"}`
+          ? "> [VERIFIED] Credential is VALID! (ZK Commitment match on Midnight Preview)"
           : "> [MISMATCH] Commitment does not match registered state.",
         res.matches ? "success" : "error"
       );
@@ -346,19 +346,7 @@ export default function IssueCertificatePage() {
               )}
             </div>
 
-            {verifyResult.inputWasTxHash && verifyResult.matches && (
-              <div style={{
-                fontSize: "0.78rem",
-                color: "#38bdf8",
-                background: "rgba(56,189,248,0.1)",
-                padding: "0.4rem 0.75rem",
-                borderRadius: "6px",
-                marginBottom: "0.75rem",
-                border: "1px solid rgba(56,189,248,0.2)"
-              }}>
-                ℹ️ Input recognized as <strong>On-Chain Transaction Hash</strong>. Automatically mapped and verified against registered ZK Commitment!
-              </div>
-            )}
+            
 
             {verifyResult.matches ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.78rem" }}>
@@ -375,7 +363,7 @@ export default function IssueCertificatePage() {
                 <div>
                   <span style={{ color: "#64748b" }}>On-Chain TxHash: </span>
                   <span style={{ color: "#94a3b8", fontFamily: "monospace", wordBreak: "break-all" }}>
-                    {verifyResult.txHash || verifyResult.resolvedTxHash || "Confirmed on-chain"}
+                    {verifyResult.txHash || "Confirmed on-chain"}
                   </span>
                 </div>
                 {verifyResult.skillId && (

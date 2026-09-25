@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { getAvailableWallets, getClient, normalizeAddressToString, DiscoveredWallet } from "../lib/contract";
 
@@ -54,21 +54,7 @@ export default function WalletConnectModal({ isOpen, onClose, onConnected }: Wal
     }
   };
 
-  const handleSimulatedConnect = () => {
-    try {
-      const client = getClient();
-      const res = client.simulateApprovalConnect();
-      const safeAddr = normalizeAddressToString(res.walletAddress);
-      setStatus("success");
-      setTimeout(() => {
-        onConnected(safeAddr, res.walletName);
-        onClose();
-      }, 400);
-    } catch (err: any) {
-      setStatus("error");
-      setErrorMessage(err?.message || "Simulated approval failed");
-    }
-  };
+
 
   return (
     <div style={{
@@ -352,20 +338,7 @@ export default function WalletConnectModal({ isOpen, onClose, onConnected }: Wal
                 >
                   Install 1AM Extension ↗
                 </a>
-                <button
-                  onClick={handleSimulatedConnect}
-                  className="btn-secondary"
-                  style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    fontSize: "0.78rem",
-                    padding: "0.5rem",
-                    borderColor: "rgba(139,92,246,0.4)",
-                    color: "#a78bfa"
-                  }}
-                >
-                  Test 1AM Approval (Dev Mode)
-                </button>
+
               </div>
             </>
           )}
