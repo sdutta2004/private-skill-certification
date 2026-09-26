@@ -3,8 +3,8 @@
 > A privacy-preserving zero-knowledge professional skill certification and assessment verification dApp built on the Midnight Network using Compact smart contracts and Midnight.js SDK.
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-private--skill--certification-181717?style=flat-square&logo=github)](https://github.com/sdutta2004/private-skill-certification)
-[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_App-000000?style=flat-square&logo=vercel)](https://private-skill-certification-xfp3.vercel.app/)
-[![YouTube Demo](https://img.shields.io/badge/YouTube-Demo_Video-FF0000?style=flat-square&logo=youtube)](https://youtu.be/Eu6eRTsOWE4)
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_App-000000?style=flat-square&logo=vercel)](https://private-skill-certification-pi.vercel.app/)
+[![YouTube Demo](https://img.shields.io/badge/YouTube-Demo_Video-FF0000?style=flat-square&logo=youtube)](https://youtu.be/8sNHOImH584)
 [![Framework](https://img.shields.io/badge/Framework-Next.js_14-black?style=flat-square&logo=nextdotjs)](https://nextjs.org)
 [![CI/CD Pipeline](https://github.com/sdutta2004/private-skill-certification/actions/workflows/ci.yml/badge.svg)](https://github.com/sdutta2004/private-skill-certification/actions/workflows/ci.yml)
 [![Midnight Network](https://img.shields.io/badge/Network-Midnight_Preview-8b5cf6?style=flat-square)](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f)
@@ -43,7 +43,7 @@ This repository adheres strictly to Midnight Level 2 & Level 3 Qualification sta
 
 4. **Zero Mocking / No Simulations**:
    - Complete removal of `simulateApprovalConnect()`, fabricated random transaction hashes, signing-as-transaction fallbacks, and local `sessionStorage` certificate registries.
-   - Verification strictly asserts against the on-chain ledger state or Compact circuit execution.
+   - Dual verification checks against on-chain transaction hashes or ZK commitment state evaluation.
 
 ---
 
@@ -51,9 +51,9 @@ This repository adheres strictly to Midnight Level 2 & Level 3 Qualification sta
 
 > **Demonstrates:** 1AM / Midnight Lace wallet connection • client-side ZK witness generation • on-chain `issueCertificate()` execution • public state verification on Midnight Preview.
 
-[![PSC Video Walkthrough](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/Eu6eRTsOWE4)
+[![PSC Video Walkthrough](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/8sNHOImH584)
 
-**Watch on YouTube**: [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4)
+**Watch on YouTube**: [https://youtu.be/8sNHOImH584](https://youtu.be/8sNHOImH584)
 
 ---
 
@@ -62,8 +62,8 @@ This repository adheres strictly to Midnight Level 2 & Level 3 Qualification sta
 | Resource | Value / Link |
 |---|---|
 | **GitHub Repository** | [https://github.com/sdutta2004/private-skill-certification](https://github.com/sdutta2004/private-skill-certification) |
-| **Live Application** | [https://private-skill-certification-xfp3.vercel.app/](https://private-skill-certification-xfp3.vercel.app/) |
-| **YouTube Demo Video** | [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4) |
+| **Live Application** | [https://private-skill-certification-pi.vercel.app/](https://private-skill-certification-pi.vercel.app/) |
+| **YouTube Demo Video** | [https://youtu.be/8sNHOImH584](https://youtu.be/8sNHOImH584) |
 | **Canonical Contract Address** | `0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f` |
 | **Midnight Explorer** | [View on Midnight Explorer](https://preview.midnightexplorer.com/contracts/0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f) |
 | **Target Network** | Midnight Preview Testnet (`preview`) |
@@ -76,23 +76,23 @@ This repository adheres strictly to Midnight Level 2 & Level 3 Qualification sta
 
 ## Platform Screenshots
 
-### 1. Main Dashboard - Hero, Live Stats & Smart Contract Card
-![Main Dashboard](photos/main-dashboard-home.png)
+### 1. Main 3D Dashboard — Hero, Live Stats & Smart Contract Card
+![Main 3D Dashboard](photos/main-dashboard-home.png)
 
-### 2. Candidate Certificate Issuance - ZK Proof & Score Threshold
-![Issue Certificate](photos/issuer-dashboard.png)
+### 2. Candidate Certificate Issuance — ZK Proof & Score Threshold Architecture
+![Issue Certificate Anonymously](photos/certificate-generate.png)
 
-### 3. Issuer Authority Console - Passing Threshold & Revocation Governance
-![Issuer Console](photos/issuer-console.png)
+### 3. DApp Chain Explorer — Real-Time On-Chain Ledger Verification
+![Chain Explorer Window](photos/chain-explorer-window.png)
 
-### 4. Midnight Chain Explorer - Real-Time On-Chain State Verification
-![Chain Explorer](photos/chain-explorer.png)
+### 4. Midnight Block Explorer — Verified Deployment on Midnight Preview
+![Midnight Explorer Deployment](photos/midnight-explorer.png)
 
-### 5. Mobile Responsive Interface
-![Mobile UI](photos/mobile-ui-dashboard.png)
+### 5. Mobile Responsive Interface — Sleek Minimalist Experience
+![Mobile UI](photos/mobile-ui-dash.png)
 
-### 6. Vitest Automated Test Suite - 31/31 Tests Passing
-![Test Results](photos/test-run-terminal.png)
+### 6. Vitest Automated Test Suite — 31/31 Tests Passing
+![Terminal Test Run](photos/terminal-test-run.png)
 
 ---
 
@@ -231,7 +231,7 @@ npm test
 
  Test Files  3 passed (3)
       Tests  31 passed (31)
-   Duration  2.48s
+   Duration  2.83s
 ```
 
 ---
@@ -302,6 +302,6 @@ npm start
 - [x] **Compact v0.23**: 6 ZK circuits, 5 private witnesses, and 8 public ledger fields
 - [x] **31/31 Vitest Tests**: Passing across unit, circuit, provider, and E2E suites
 - [x] **Next.js 14 Build**: Static generation passing with zero errors
-- [x] **Live Application**: [https://private-skill-certification-xfp3.vercel.app/](https://private-skill-certification-xfp3.vercel.app/)
-- [x] **YouTube Demo Video**: [https://youtu.be/Eu6eRTsOWE4](https://youtu.be/Eu6eRTsOWE4)
+- [x] **Live Application**: [https://private-skill-certification-pi.vercel.app/](https://private-skill-certification-pi.vercel.app/)
+- [x] **YouTube Demo Video**: [https://youtu.be/8sNHOImH584](https://youtu.be/8sNHOImH584)
 - [x] **GitHub Actions CI/CD**: Clean compilation, test, and build automation
