@@ -36,7 +36,7 @@ describe('Midnight Preview Testnet — Live E2E Integration Suite', () => {
     expect(action.address).toBe('3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f');
     expect(typeof action.state).toBe('string');
     expect(action.state.length).toBeGreaterThan(100);
-  });
+  }, 15000);
 
   it('3. Byte Encoding Round-Trip: hexToBytes and bytesToHex maintain fidelity', () => {
     const originalHex = '0x3fdade83e8095150cb31f7eba597870b497f2bc35ded57aed33cfe8e6804f78f'.toLowerCase();
