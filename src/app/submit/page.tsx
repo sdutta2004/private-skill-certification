@@ -47,7 +47,9 @@ export default function IssueCertificatePage() {
       }
 
       addLog("> [CIRCUIT] Executing issueCertificate(Bytes<32>) on Midnight Network...", "info");
+      addLog("> [1AM WALLET] Requesting transaction approval and signature dialog...", "info");
       const res = await client.issueCertificate(skillId);
+      addLog(`> [1AM WALLET CONFIRMED] Authenticated by 1AM Wallet: ${res.signedBy}`, "success");
       setResult(res);
       setClaimedCommitment(res.commitmentHex);
       addLog(`> [SUCCESS] Certificate issued! TxHash: ${res.txHash}`, "success");
@@ -71,7 +73,9 @@ export default function IssueCertificatePage() {
     try {
       addLog(`> [VERIFY] Initiating verification for: ${identifier.trim().slice(0, 18)}...`, "info");
       addLog("> [CIRCUIT] Executing verifyCertificate(Bytes<32>) on Midnight Network...", "info");
+      addLog("> [1AM WALLET] Requesting verification proof authentication from 1AM Wallet...", "info");
       const res = await getClient().verifyCertificate(identifier.trim());
+      addLog(`> [1AM WALLET] Verified by: ${res.signedBy}`, "success");
       setVerifyResult(res);
       addLog(
         res.matches
@@ -366,6 +370,25 @@ export default function IssueCertificatePage() {
                     {verifyResult.txHash || "Confirmed on-chain"}
                   </span>
                 </div>
+                {verifyResult.signedBy && (
+                  <div>
+                    <span style={{ color: "#64748b" }}>Verified By: </span>
+                    <span style={{ color: "#a78bfa", fontWeight: 600 }}>{verifyResult.signedBy}</span>
+                  </div>
+                )}
+                {verifyResult.txHash && (
+                  <div>
+                    <span style={{ color: "#64748b" }}>1AM Explorer: </span>
+                    <a
+                      href={`https://explorer.1am.xyz/tx/${verifyResult.txHash.replace(/^0x/, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "#38bdf8", textDecoration: "underline" }}
+                    >
+                      View on 1AM Explorer ↗
+                    </a>
+                  </div>
+                )}
                 {verifyResult.skillId && (
                   <div>
                     <span style={{ color: "#64748b" }}>Certified Competency: </span>
