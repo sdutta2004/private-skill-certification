@@ -85,14 +85,13 @@ function hexToVariableBytes(hex: string): Uint8Array {
 
 function createWalletProviders(
   api: ConnectedAPI,
-  shielded: {
-    shieldedCoinPublicKey: string;
-    shieldedEncryptionPublicKey: string;
-  }
+  shielded: any
 ): { walletProvider: WalletProvider; midnightProvider: MidnightProvider } {
+  const coinPk = shielded?.shieldedCoinPublicKey || shielded?.coinPublicKey || shielded?.publicKey || '';
+  const encPk = shielded?.shieldedEncryptionPublicKey || shielded?.encryptionPublicKey || shielded?.encPublicKey || '';
   const walletProvider: WalletProvider = {
-    getCoinPublicKey: () => shielded.shieldedCoinPublicKey as CoinPublicKey,
-    getEncryptionPublicKey: () => shielded.shieldedEncryptionPublicKey as EncPublicKey,
+    getCoinPublicKey: () => coinPk as CoinPublicKey,
+    getEncryptionPublicKey: () => encPk as EncPublicKey,
     async balanceTx(tx) {
       const balanced = await api.balanceUnsealedTransaction(safeBytesToHex(tx.serialize()));
       return Transaction.deserialize(
@@ -137,11 +136,13 @@ export const deployWithMidnight: DeploymentAdapter = async ({
     configuration.indexerWsUri,
     typeof window !== 'undefined' ? window.WebSocket : (undefined as any),
   );
-  const shielded = await wallet.getShieldedAddresses();
+  const rawShielded = await wallet.getShieldedAddresses();
+  const shielded = Array.isArray(rawShielded) ? rawShielded[0] : rawShielded;
   const { walletProvider, midnightProvider } = createWalletProviders(wallet, shielded);
+  const accountId = shielded?.shieldedAddress || shielded?.address || 'psc-default-account';
   const privateStateProvider = levelPrivateStateProvider<typeof PRIVATE_STATE_ID, PSCPrivateState>({
     privateStoragePasswordProvider: storagePassword,
-    accountId: shielded.shieldedAddress,
+    accountId,
     cryptoBackend: 'webcrypto',
   });
 
@@ -159,7 +160,7 @@ export const deployWithMidnight: DeploymentAdapter = async ({
       compiledContract,
       privateStateId: PRIVATE_STATE_ID,
       initialPrivateState,
-      args: [stringToBytes32(skillId), BigInt(threshold)],
+      args: [],
     },
   );
 
