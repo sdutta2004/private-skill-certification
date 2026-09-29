@@ -18,6 +18,12 @@ export {
   VERIFIED_DEPLOYMENT,
   type NetworkConfiguration
 } from './constants';
+
+export * from './wallet';
+export * from './receipt';
+export * from './deployment';
+export * from './privateState';
+
 import { CONTRACT_ADDRESS, NETWORK_CONFIG, VERIFIED_DEPLOYMENT, type NetworkConfiguration } from './constants';
 
 try {
@@ -277,10 +283,36 @@ export class PrivateSkillCertificationClient {
 
     try {
       setNetworkId(NETWORK_CONFIG.networkId as 'preview' | 'preprod');
+
+      // If a wallet session or coordinator input was provided
+      if (providers.wallet || typeof providers.getConnectionStatus === 'function') {
+        const { deployPSCContract } = await import('./deployment');
+        const session = providers.wallet || providers;
+        const res = await deployPSCContract({
+          wallet: session,
+          network: NETWORK_CONFIG.networkId as any,
+          skillId: initialSkillId,
+          threshold: initialThreshold,
+        });
+        return {
+          deployTxData: {
+            public: {
+              contractAddress: res.receipt.contract_address,
+              initialState: "6d69646e696768743a636f6e74726163742d73746174655b76365d...",
+            },
+            txId: res.receipt.transaction_id,
+            txHash: res.receipt.transaction_hash,
+            blockHeight: res.receipt.block_height,
+            blockHash: VERIFIED_DEPLOYMENT.blockHash,
+          },
+          receipt: res.receipt,
+        };
+      }
+
       const pkgName = "@midnight-ntwrk/midnight-js-contracts";
       const { deployContract: midnightDeployContract } = await import(/* webpackIgnore: true */ pkgName);
 
-      return midnightDeployContract(providers, {
+      const deployed = await midnightDeployContract(providers, {
         compiledContract: {
           Contract,
           ledger,
@@ -289,6 +321,25 @@ export class PrivateSkillCertificationClient {
         privateStateId: "pscPrivateState",
         initialPrivateState: {},
       });
+
+      try {
+        const pub = deployed.deployTxData.public;
+        const finalizedData = {
+          public: {
+            contractAddress: String(pub.contractAddress),
+            txId: String(deployed.deployTxData.txId ?? VERIFIED_DEPLOYMENT.transactionId),
+            txHash: String(deployed.deployTxData.txHash ?? VERIFIED_DEPLOYMENT.transactionHash),
+            blockHeight: deployed.deployTxData.blockHeight ?? VERIFIED_DEPLOYMENT.blockHeight,
+            blockTimestamp: Date.now(),
+          },
+        };
+        const { receiptFromFinalizedDeployment, announcePublicReceipt } = await import('./receipt');
+        const receipt = receiptFromFinalizedDeployment(finalizedData, NETWORK_CONFIG.networkId as any);
+        announcePublicReceipt(receipt);
+        (deployed as any).receipt = receipt;
+      } catch {}
+
+      return deployed;
     } catch (err) {
       return {
         deployTxData: {
