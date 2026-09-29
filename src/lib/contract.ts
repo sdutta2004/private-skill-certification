@@ -672,23 +672,7 @@ export class PrivateSkillCertificationClient {
         } catch {}
       }
 
-      if (typeof this.walletApi.balanceUnsealedTransaction === "function" && typeof this.walletApi.submitTransaction === "function") {
-        try {
-          const dummyUnsealed = bytesToHex(new Uint8Array(64).fill(7));
-          const balanced = await this.walletApi.balanceUnsealedTransaction(dummyUnsealed);
-          if (balanced && balanced.tx) {
-            await this.walletApi.submitTransaction(balanced.tx);
-            const txId = typeof balanced.tx === "string" ? balanced.tx.slice(0, 64) : null;
-            if (txId) return "0x" + txId.replace(/^0x/, "");
-          }
-        } catch (e: any) {
-          const errMsg = e?.message || String(e);
-          if (/reject|cancel|denied/i.test(errMsg)) {
-            throw new Error("1AM Wallet request was rejected. Your transaction was not submitted.");
-          }
-          console.warn(`[Midnight] 1AM submit error for ${circuitName}:`, errMsg);
-        }
-      }
+      
 
       if (typeof this.walletApi.submitCallTx === "function") {
         try {

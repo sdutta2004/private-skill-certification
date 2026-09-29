@@ -1,4 +1,4 @@
-// src/lib/midnightDeployment.ts
+﻿// src/lib/midnightDeployment.ts
 // Real-time Midnight SDK deployment pipeline for Private Skill Certification.
 // Directly interfaces with 1AM wallet, Midnight proving provider, indexer, and ledger.
 
@@ -21,20 +21,47 @@ import { dappConnectorProofProvider } from '@midnight-ntwrk/midnight-js-dapp-con
 import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
-import { Contract, type Witnesses } from '../../managed/contract/index.js';
+import {
+  Contract,
+  type EligibilityCredential,
+  type Schnorr_SchnorrSignature,
+  type Witnesses,
+} from '../../contracts/artifacts/contract/index.js';
 import type { DeploymentAdapter } from './deployment';
-import { hexToBytes as safeHexToBytes, bytesToHex as safeBytesToHex } from './privateState';
 
 const PRIVATE_STATE_ID = 'psc-credential-v1';
 const STORAGE_KEY = 'psc.midnight-storage-key.v1';
+const POLICY_TEXT = 'Private Skill Certification Program: candidate score >= 70 and verified skill program; eligibility outcome only.';
+const TWO_248 = 452312848583266388373324160190187140051835877600158453279131187530910662656n;
+
+export type Attestation = {
+  credential: EligibilityCredential;
+  signature: Schnorr_SchnorrSignature;
+  issuerId: bigint;
+};
 
 export type PSCPrivateState = {
-  candidateSecretKey: Uint8Array;
-  scoreProofNonce: Uint8Array;
-  certificationRecordHash: Uint8Array;
-  candidateScoreProof: bigint;
-  issuerSigningKey: Uint8Array;
+  holderSecret: Uint8Array;
+  attestation?: Attestation;
 };
+
+export function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+  if (!/^[0-9a-f]{64}$/i.test(clean)) {
+    const bytes = new Uint8Array(32);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(bytes);
+    } else {
+      bytes.fill(17);
+    }
+    return bytes;
+  }
+  return Uint8Array.from(clean.match(/.{2}/g) ?? [], (byte) => Number.parseInt(byte, 16));
+}
+
+export function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 function storagePassword(): string {
   if (typeof localStorage === 'undefined') {
@@ -48,31 +75,42 @@ function storagePassword(): string {
     } else {
       for (let i = 0; i < 32; i++) bytes[i] = Math.floor(Math.random() * 256);
     }
-    secret = safeBytesToHex(bytes);
+    secret = bytesToHex(bytes);
     localStorage.setItem(STORAGE_KEY, secret);
   }
   const chunks = secret.match(/.{1,3}/g);
   return `PSC!${chunks ? chunks.join('-') : secret}`;
 }
 
-export function stringToBytes32(str: string): Uint8Array {
+async function policyHash(skillId?: string, threshold?: number): Promise<Uint8Array> {
+  const policy = `${POLICY_TEXT} [Skill: ${skillId ?? 'skill_fullstack_zk_engineer'}, Threshold: ${threshold ?? 70}]`;
+  if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+    return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(policy)));
+  }
   const bytes = new Uint8Array(32);
-  const encoded = new TextEncoder().encode(str);
-  bytes.set(encoded.subarray(0, 32));
+  const enc = new TextEncoder().encode(policy);
+  bytes.set(enc.subarray(0, 32));
   return bytes;
 }
 
-const witnesses: Witnesses = {
-  candidateSecretKey: (ctx: any) => [ctx?.privateState, ctx?.privateState?.candidateSecretKey ?? new Uint8Array(32)],
-  scoreProofNonce: (ctx: any) => [ctx?.privateState, ctx?.privateState?.scoreProofNonce ?? new Uint8Array(32)],
-  certificationRecordHash: (ctx: any) => [ctx?.privateState, ctx?.privateState?.certificationRecordHash ?? new Uint8Array(32)],
-  candidateScoreProof: (ctx: any) => [ctx?.privateState, ctx?.privateState?.candidateScoreProof ?? 85n],
-  issuerSigningKey: (ctx: any) => [ctx?.privateState, ctx?.privateState?.issuerSigningKey ?? new Uint8Array(32)],
+const witnesses: Witnesses<PSCPrivateState> = {
+  getHolderSecret: ({ privateState }) => [privateState, privateState.holderSecret],
+  getEligibilityCredential: ({ privateState }) => {
+    if (!privateState.attestation) {
+      throw new Error('No issuer attestation is enrolled for this local credential.');
+    }
+    const { credential, signature, issuerId } = privateState.attestation;
+    return [privateState, [credential, signature, issuerId]];
+  },
+  getSchnorrReduction: ({ privateState }, challengeHash) => [
+    privateState,
+    [challengeHash / TWO_248, challengeHash % TWO_248],
+  ],
 };
 
-const compiledContract: any = (CompiledContract.make as any)('PrivateSkillCertification', Contract).pipe(
-  (CompiledContract.withWitnesses as any)(witnesses),
-  (CompiledContract.withCompiledFileAssets as any)('/'),
+const compiledContract = CompiledContract.make('TriageKey', Contract).pipe(
+  CompiledContract.withWitnesses(witnesses),
+  CompiledContract.withCompiledFileAssets('/'),
 );
 
 function hexToVariableBytes(hex: string): Uint8Array {
@@ -93,7 +131,7 @@ function createWalletProviders(
     getCoinPublicKey: () => coinPk as CoinPublicKey,
     getEncryptionPublicKey: () => encPk as EncPublicKey,
     async balanceTx(tx) {
-      const balanced = await api.balanceUnsealedTransaction(safeBytesToHex(tx.serialize()));
+      const balanced = await api.balanceUnsealedTransaction(bytesToHex(tx.serialize()));
       return Transaction.deserialize(
         'signature',
         'proof',
@@ -104,7 +142,7 @@ function createWalletProviders(
   };
   const midnightProvider: MidnightProvider = {
     async submitTx(tx: FinalizedTransaction) {
-      await api.submitTransaction(safeBytesToHex(tx.serialize()));
+      await api.submitTransaction(bytesToHex(tx.serialize()));
       const txId = tx.identifiers()[0];
       if (!txId) throw new Error('1AM submitted the transaction without returning a transaction identifier.');
       return txId;
@@ -146,12 +184,15 @@ export const deployWithMidnight: DeploymentAdapter = async ({
     cryptoBackend: 'webcrypto',
   });
 
+  const holderSecret = new Uint8Array(32);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(holderSecret);
+  } else {
+    holderSecret.fill(17);
+  }
+
   const initialPrivateState: PSCPrivateState = {
-    candidateSecretKey: new Uint8Array(32).fill(11),
-    scoreProofNonce: new Uint8Array(32).fill(22),
-    certificationRecordHash: new Uint8Array(32).fill(33),
-    candidateScoreProof: BigInt(threshold),
-    issuerSigningKey: new Uint8Array(32).fill(44),
+    holderSecret,
   };
 
   const deployed = await deployContract(
@@ -160,7 +201,7 @@ export const deployWithMidnight: DeploymentAdapter = async ({
       compiledContract,
       privateStateId: PRIVATE_STATE_ID,
       initialPrivateState,
-      args: [],
+      args: [await policyHash(skillId, threshold)],
     },
   );
 
